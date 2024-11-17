@@ -1,0 +1,569 @@
+body {
+  color: #506784;
+  background:
+    linear-gradient(
+      rgba(255, 255, 255,0.8),
+      rgba(255, 255, 255, 0.8)
+    ),
+    url("https://github.com/plotly/dash-docs/raw/master/images/dash-pattern.png");
+    /*url("lmt_img.jpg");*/
+  margin: 0px;
+}
+.navbar-brand-left {
+  margin-right: auto;
+}
+.custom-bold{
+  font-weight: bold;
+  font-size: large;
+}
+
+._dash-loading {
+  text-align: center;
+  margin-top: 50px;
+}
+
+.accordion-button {
+    font-size: small;
+    background-color: #D1D1D1;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: cornflowerblue;
+}
+
+.link-button{
+    border: none
+}
+/* Header */
+.header {
+    height: 60px;
+    -webkit-box-shadow: 0px 5px 5px 0px rgba(100, 100, 100, 0.1);
+    -moz-box-shadow:    0px 5px 5px 0px rgba(100, 100, 100, 0.1);
+    box-shadow:         0px 5px 5px 0px rgba(100, 100, 100, 0.1);
+    margin-bottom: 20px;
+    background-color: white;
+    margin-top: 20px;
+
+}
+
+/*style={*/
+/*        'position': 'fixed',  # This fixes the navbar position*/
+/*        'top': 0,  # Aligns the navbar to the top of the page*/
+/*        'left': 0,*/
+/*        'width': '100%',  # Navbar width is 100% of the page*/
+/*        'zIndex': 1000  # Ensures navbar stays on top of other elements*/
+/*    }*/
+
+.header .links {
+  display: inline-block;
+  float: right;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: rgb(81, 104, 131);
+  font-size: 16px;
+  vertical-align: middle;
+}
+
+.header .links .link {
+  margin-left: 20px;
+  line-height: 60px;
+  display: inline-block;
+  color: #506784;
+  cursor: pointer;
+  background-color: white;
+  text-decoration: none;
+}
+
+.header .links .link:hover {
+  color: #0D67BF;
+  text-decoration: none;
+}
+
+.header .links .link.active {
+  border-bottom: #119DFF 2px solid;
+  color: #2A3F5F;
+  height: 59px;
+}
+
+.header .links .link:hover {
+  border-bottom: #119DFF 2px solid;
+  color: #2A3F5F;
+  height: 59px;
+}
+
+
+.header .logo {
+  height: 95%;
+}
+
+.header .logo-link {
+  background-color: white;
+}
+
+/* Example Container */
+
+.example-container {
+  border: thin lightgrey solid;
+  padding: 15px;
+  overflow-x: scroll;
+}
+
+/* Fonts */
+h1, h2, h3, h4, h5, h6 {
+  font-family: Dosis, 'HelveticaNeue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  color: #2A3F5F;
+}
+
+.example-container h1,
+.example-container h2,
+.example-container h3,
+.example-container h4,
+.example-container h5,
+.example-container h6 {
+  font-weight: 300;
+  font-family: "Open Sans", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: rgb(50, 50, 50);
+}
+
+.gallery .image-link {
+  background-color: white;
+}
+
+.gallery img {
+  width: 100%;
+  border: thin lightgrey solid;
+  border-radius: 5px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.toc ul li a {
+  background-color: white;
+  color: #506784;
+  font-family: Dosis, 'HelveticaNeue', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-decoration: none;
+}
+
+.toc ul li {
+  font-size: 26px;
+  color: #506784;
+}
+
+.toc ul ul li {
+  font-size: 18px;
+  color: #506784;
+  display: none;
+}
+
+.toc ul ul ul li {
+  font-size: 14px;
+  color: #506784;
+  font-weight: 200;
+}
+
+/* Links
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.content a {
+  color: #506784;
+  background-color: rgb(245, 245, 245);
+  text-decoration: underline;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 1px;
+}
+
+.content a:hover {
+  color: #0D67BF;
+  text-decoration: underline;}
+
+.content a > img:hover {
+  border: thin #119DFF solid;
+  cursor: pointer;
+}
+
+
+.content p > code,
+.content li > code{
+    background-color: rgb(243, 246, 251);
+    border: 0.5px rgb(224, 232, 242) solid;
+    border-radius: 4px;
+    font-size: 1.8rem;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.toc li {
+  list-style: none;
+}
+
+.content-container {
+    background-color: white;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    /*box-shadow: rgb(240, 240, 240) 5px 5px 5px 0px;*/
+    /*border: 10px solid rgb(240, 240, 240);*/
+    /*overflow-Y: auto;*/
+}
+
+@media (min-width: 0px) {
+  .content {
+     margin-left: 20px;
+     margin-right: 20px;
+     margin-top: 20px;
+     margin-bottom: 40px;
+  }
+
+  .container-width {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .toc-chapters {
+    column-count: 1;
+  }
+
+  .header .links {
+    display: none;
+  }
+}
+
+._dash-undo-redo {
+  display: none;
+}
+
+@media (min-width: 450px) {
+  .header .links {
+    display: block;
+  }
+}
+
+@media (min-width: 750px) {
+  .content {
+     margin-left: 60px;
+     margin-right: 60px;
+     margin-top: 20px;
+     margin-bottom: 40px;
+  }
+
+  .container-width {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .toc-chapters {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 900px) {
+   .container-width {
+     width: 80%;
+     max-width: 960px;
+  }
+}
+
+
+.custom-tabs-container {
+    width: 100%;
+    height: 2%;
+}
+.custom-tabs {
+    border-top-left-radius: 3px;
+    #background-color: #f9f9f9;
+    color: #0D67BF;
+    background-color:beige;
+    padding: 0px 15px;
+    border-bottom: 1px solid #d6d6d6;
+}
+
+.custom-tab {
+    color:#586069;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-top: 3px solid transparent !important;
+    border-left: 0px !important;
+    border-right: 0px !important;
+    border-bottom: 0px !important;
+    background-color: #fafbfc;
+    padding: 10px !important;
+    font-family: "system-ui";
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+.custom-tab--selected {
+    color: black;
+    box-shadow: 1px 1px 0px white;
+    border-left: 1px solid lightgrey !important;
+    border-right: 1px solid lightgrey !important;
+    border-top: 3px solid #62bcbe !important;
+}
+
+.alert {
+  padding: 15px;
+  margin: 10px 0;
+  border: 1px solid #eed3d7;
+  background-color: #f9ebec;
+  color: #c7254e;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.alert-success {
+  background-color: #dff0d8;
+  color: #3c763d;
+  border-color: #d6e9c6;
+}
+
+.alert-info {
+  background-color: #d9edf7;
+  color: #31708f;
+  border-color: #bce8f1;
+}
+
+.alert-warning {
+  width: 100%;
+  background-color: #d9edf7;
+  color: #555555;
+  border-color: #faebcc;
+}
+
+.alert-danger {
+  background-color: #f2dede;
+  color: #a94442;
+  border-color: #ebccd1;
+}
+
+.large-label{
+    font-size: 15px;
+    font-weight: bold;
+    background-color: #bbbbbb;
+}
+.sm-label{
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.Select-menu-outer {
+display : block !important;
+}
+
+.vertical-align-center {
+    display: flex;
+    align-items: center;
+}
+
+.strike-through {
+    position: relative;
+}
+
+.strike-through::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -5px;    /* Adjust this to control how much longer on the left */
+    right: -5px;   /* Adjust this to control how much longer on the right */
+    height: 3px;   /* The thickness of the line */
+    background-color: currentColor; /* Use the text's current color for the line */
+}
+
+.my-radio-items .selected {  /* or whatever the actual class Dash uses for selected items */
+    background-color: yellow;  /* or any other styling changes you want */
+}
+
+.my-session {
+    font-size: 1.5rem; /* Example size, adjust as needed */
+}
+
+.my-session {
+    display: flex;
+    /*align-items: center; !* Centers the label with the radio button *!*/
+    /*justify-content: center; !* Center align horizontally, if needed *!*/
+}
+
+.custom-input {
+    width: 200px;  /* Adjust the width as needed */
+    height: 100px;  /* Adjust the height as needed */
+}
+
+.border-right {
+    border-right: 1px solid #dee2e6; /* standard border color for light theme in Bootstrap */
+}
+
+/* Increase font size and padding for large tooltip */
+.large-tooltip .tooltip-inner {
+    font-size: 1.5rem; /* Larger font size */
+    padding: 5px 5px; /* Larger padding */
+    background-color: black;
+}
+
+/* Optionally, increase the size of the arrow as well */
+.large-tooltip .arrow::before {
+    border-width: 10px; /* Makes the arrow larger */
+}
+
+.title-link {
+    color: #0D67BF;
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 10px;
+
+}
+.session-list-container {
+    border: 1px solid #CCCCCC;
+    overflowY: auto;
+    flex-grow: 1;
+}
+/*style={'flex-grow': '1', 'overflowY': 'auto', 'padding': '10px'}*/
+.session-list-display {
+    height: 50vh;
+    /*display: flex;*/
+    flex-direction: column;
+    border: 1px solid #CCCCCC;
+    padding: 10px;
+}
+.submit-job-message {
+    font-size: 0.8em; /* Smaller font size */
+    line-height: 1.5; /* Spacing between lines */
+    color: #333; /* Text color */
+}
+.custom-tooltip {
+     font-size: 14px !important; /* Larger text */
+    padding: 5px 10px !important; /* Reduce height */
+    margin-top: 5px !important; /* Add space between icon and tooltip */
+    background-color: rgba(255, 255, 255, 0.8) !important; /* Lighter background */
+    color: black !important; /* Dark text */
+    border-radius: 5px !important; /* Slight border rounding */
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1) !important; /* Light shadow */
+}
+
+.upload-box {
+    width: 300px;
+    height: 35px;
+    font-size: 16px;
+    /*line-height: 60px;*/
+    border-width: 1px;
+    border-style: dashed;
+    border-radius: 5px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.runfile-content {
+    margin: 10px 0;
+    padding: 10px;
+    width: 100%;
+    height: 50vh;
+    border: 1px solid #CCCCCC;
+    background-color: #f9f9f9;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+}
+
+.runfile-save-btn {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.runfile-save-btn:hover {
+    background-color: #0056b3;
+}
+
+.runfile-content-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 10px;
+    padding: 20px;
+    border: 1px solid #CCCCCC;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.main-container {
+    height: 95vh;
+    display: flex;
+    flex-direction: column;
+    /*align-items: center;*/
+    /*justify-content: center;*/
+    margin: 10px;
+    padding: 10px;
+
+    /*border-radius: 5px;*/
+    /*background-color: #fff;*/
+    /*box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);*/
+}
+
+.fixed-navbar {
+    /*position: fixed;*/
+    /*top:10px;*/
+    /*margin-bottom: 100px;*/
+    width: 100%;
+    z-index: 1000;
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+    /*padding: 0.5rem 0.75rem;*/
+    border-radius: 0.25rem;
+    background-color: transparent;
+    border: 0px solid #007bff;
+}
+
+.button-group {
+    width: 100%;
+
+    display: flex;
+    flex-direction: row;
+    /*justify-content: center;*/
+    /*align-items: center;*/
+
+}
+
+.extra-large-modal .modal-dialog {
+    max-width: 95%;
+    width: 95%;
+}
+
+.parameter-table-title {
+    text-align: center;
+    width: 100%;  /* Ensure the title takes full width of its container */
+    display: block;  /* Make sure it's a block-level element */
+    margin: 0 0;  /* Add some vertical margin for spacing */
+}
+
+#instrument-btn-group-container {
+    position: absolute;
+    right: 10px;  /* Adjust as needed */
+    top: 20px;    /* Adjust to align with the selected rows */
+}
+
+/*.checkbox-grid-container {*/
+/*    display: grid;*/
+/*    grid-template-columns: repeat(4, 1fr); !* 4 columns *!*/
+/*    gap: 10px; !* Space between checkboxes *!*/
+/*}*/
+
+/*.checkbox-row {*/
+/*    display: flex;*/
+/*    flex-direction: row;*/
+/*}*/
+
+.checkbox-container {
+    display: flex;
+    flex-direction: column;
+}

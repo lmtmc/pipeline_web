@@ -24,7 +24,9 @@ db = SQLAlchemy(server)
 app = dash.Dash(
     __name__,
     server=server,
-    url_base_pathname=prefix,
+    requests_pathname_prefix=prefix,
+    routes_pathname_prefix=prefix,
+    #url_base_pathname=prefix,
     external_stylesheets=[
         dbc.themes.BOOTSTRAP,
         dbc.icons.FONT_AWESOME,

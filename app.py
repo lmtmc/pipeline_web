@@ -11,13 +11,19 @@ try :
     config = load_config()
 except Exception as e:
     print(f"Error loading configuration: {e}")
+    config = {}
 
 # Constants
 PREFIX = config['path']['prefix']
 DEFAULT_WORK_LMT = config['path']['work_lmt']
 DATA_STORE_INIT = {
-    'pid': None, 'runfile': None, 'source': {}, 'selected_row': None, 'instrument': None,
-    'selected_runfile': None, 'selected_session': None
+    'pid': None,
+    'runfile': None,
+    'source': {},
+    'selected_row': None,
+    'instrument': None,
+    'selected_runfile': None,
+    'selected_session': None
 }
 # Define the app layout
 def create_layout():
@@ -27,11 +33,10 @@ def create_layout():
             html.Br(),
             html.Div(id='body-content', className='content-container'),
             dcc.Location(id='url', refresh=False),
-            dcc.Store(id='data-store',
-                      data={'pid': None, 'runfile': None, 'source': {}, 'selected_row': None, 'instrument': None,
-                            'selected_runfile': None, 'selected_session': None},
-                      storage_type='session',),
-        ], id='main-container', className='main-container'
+            dcc.Store(id='data-store', data=DATA_STORE_INIT, storage_type='session'),
+        ],
+        id='main-container',
+        className='main-container'
     )
 
 app.layout = create_layout()
@@ -52,45 +57,49 @@ def update_page(pathname,data):
     is_authenticated = current_user.is_authenticated
     username = current_user.username if is_authenticated else None
     navbar = ui.create_navbar(is_authenticated, username)
-    instrument = data.get('instrument',None)
+    instrument = data.get('instrument')
 
-    if pathname.startswith(PREFIX):
-        route = pathname[len(PREFIX):]
+    if not pathname.startswith(PREFIX):
+        return navbar, html.Div('404 - Page not found'), data
 
-        if route in ['', 'login']:
-            content = login.layout
-        elif route == 'project' and is_authenticated:
-            content = project_layout.layout
-        elif route == 'rsr-edit' and is_authenticated and instrument == 'rsr':
-            content = rsr_layout.layout
-        elif route == 'sequoia-edit' and is_authenticated and instrument == 'sequoia':
-            content = sequoia_layout.layout
-        elif route == 'help':
-            content = help.layout
-        elif route == 'logout':
-            if is_authenticated:
-                data = {'pid': None, 'runfile': None, 'source': {}, 'selected_row': None, 'instrument': None,
-                        'selected_runfile': None, 'selected_session': None}
-                logout_user()
-                session.clear()
-            content = dcc.Location(pathname=f'{PREFIX}login', id='redirect-after-logout')
-        elif not is_authenticated:
-            content = login.layout
-        else:
-            content = html.Div('404 - Page not found')
+    route = pathname[len(PREFIX):]
+
+    if route in ['', 'login']:
+        content = login.layout
+    elif route == 'project' and is_authenticated:
+        content = project_layout.layout
+    elif route == 'rsr-edit' and is_authenticated and instrument == 'rsr':
+        content = rsr_layout.layout
+    elif route == 'sequoia-edit' and is_authenticated and instrument == 'sequoia':
+        content = sequoia_layout.layout
+    elif route == 'help':
+        content = help.layout
+    elif route == 'logout':
+        if is_authenticated:
+            data = DATA_STORE_INIT
+            logout_user()
+            session.clear()
+        content = dcc.Location(pathname=f'{PREFIX}login', id='redirect-after-logout')
+    elif not is_authenticated:
+        content = login.layout
     else:
         content = html.Div('404 - Page not found')
+
     return navbar, content, data
 
 server = app.server
 
-if __name__ == '__main__':
+# Run the server
+def main():
     parser = argparse.ArgumentParser(description="Run the Dash app")
-    parser.add_argument("-p", "--port", type=int, default=8000,
-                        help="Port to run the Dash app on")
+    parser.add_argument("-p", "--port", type=int, default=8000, help="Port to run the Dash app on")
     args = parser.parse_args()
+
     try:
         app.server.run(port=args.port, debug=True)
     except Exception as e:
-        print(e)
+        print(f"Error: {e}")
         app.server.run(port=args.port, debug=True)
+
+if __name__ == '__main__':
+    main()

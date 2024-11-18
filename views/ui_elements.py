@@ -12,7 +12,7 @@ except Exception as e:
     print(f"Error loading configuration: {e}")
 
 prefix = config['path']['prefix']
-default_data_lmt = config['path']['data_lmt']
+
 class Session(Enum):
     NAME_INPUT = 'session-name'
     MESSAGE = 'session-message'
@@ -121,13 +121,6 @@ class Storage(Enum):
     DATA_STORE = 'data-store'
     URL_LOCATION = 'url_session1'
 
-
-session_height = '75vh'
-parameter_body_height = '75vh'
-detail_height = '35vh'
-card_height = '28vh'
-detail_card_style = {'height': card_height, 'padding': '10px', 'overflowY': 'auto', 'margin': '10px'}
-
 session_modal = pf.create_modal(
     'Create a new session',
     [
@@ -213,37 +206,40 @@ submit_job_layout = html.Div(
 ])
 #
 
-runfile_layout = dbc.Container([
-    #html.H3('Runfile Content', className='mb-4 title-link', id='runfile-content-title'),
-    dbc.Row([
-        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value), className='text-center my-4',width='auto'),
-        dbc.Col([
-            dbc.ButtonGroup([
-                dbc.Button(html.I(className='fas fa-edit'), id=Runfile.EDIT_BTN.value, outline=True, className='btn-icon', color='secondary'),
-                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value,outline=True, className='btn-icon',color='secondary'),
-                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, className='btn-icon', color='secondary'),
-            ], size='lg'),
-        ], width='auto', className='d-flex align-items-center'),
-    ], className='mb-3 align-items-center'),
-    html.Div([
-        dcc.Textarea(id=Runfile.CONTENT.value, className='runfile-content',readOnly=True),
-        dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
-    ],
-        className = 'runfile-content-container',
-    ),
-    clone_runfile_modal,
-    dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
-    dbc.Tooltip("Edit", target=Runfile.EDIT_BTN.value, placement='bottom'),
-    dbc.Tooltip("Delete", target=Runfile.DEL_BTN.value, placement='bottom'),
-    dbc.Tooltip("Clone", target=Runfile.CLONE_BTN.value, placement='bottom'),
-], id=Runfile.CONTENT_DISPLAY.value, style={'display': 'none'}, fluid=True)
-
-
-parameter_body_height = '75vh'
-
-detail_height = '35vh'
-card_height = '28vh'
-detail_card_style = {'height': card_height, 'padding': '10px', 'overflowY': 'auto', 'margin': '10px'}
+runfile_layout = html.Div(
+    dbc.Card(
+        [
+            dbc.CardHeader(
+                dbc.Row(
+                    [
+                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value), className='text-center my-4',width='auto'),
+                        dbc.Col(
+                            dbc.ButtonGroup([
+                                dbc.Button(html.I(className='fas fa-edit'), id=Runfile.EDIT_BTN.value, outline=True, className='btn-icon', color='secondary'),
+                                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value,outline=True, className='btn-icon',color='secondary'),
+                                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, className='btn-icon', color='secondary'),
+                            ],size='lg'
+                            ),
+                            width='auto', className='d-flex align-items-center'),
+                    ], className='mb-3 align-items-center'
+                )
+            ),
+            dbc.CardBody(
+                html.Div(
+                    [
+                        dcc.Textarea(id=Runfile.CONTENT.value, className='runfile-content',readOnly=True),
+                        dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
+                    ]),
+            ),
+            clone_runfile_modal,
+            dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
+            dbc.Tooltip("Edit", target=Runfile.EDIT_BTN.value, placement='bottom'),
+            dbc.Tooltip("Delete", target=Runfile.DEL_BTN.value, placement='bottom'),
+            dbc.Tooltip("Clone", target=Runfile.CLONE_BTN.value, placement='bottom'),
+        ]),
+    id=Runfile.CONTENT_DISPLAY.value,
+    className='runfile-content-container'
+)
 
 common_columns = ['_s', 'obsnum']
 instruments = {
@@ -268,8 +264,11 @@ custom_multiselect = {
 def create_table(instrument, columns):
     # Define special configurations for specific columns
     special_columns_editor = {
-        '_s': {'cellEditor': 'agSelectCellEditor', 'cellEditorParams': {}},
-        'obsnum': {'cellEditor': 'agSelectCellEditor', 'cellEditorParams': {}},
+        '_s': {
+            'cellEditor': 'agSelectCellEditor',
+            'cellEditorParams': {},
+        },
+        'obsnum': {'cellEditor': 'agSelectCellEditor','cellEditorParams': {}},
         'bank': {'cellEditor': {'function': 'RadioSelector'}, 'cellEditorParams': {'values': [0, 1]}},
         'px_list': {'cellEditor': {'function':'CheckboxSelector'}, 'cellEditorParams': {}},
         'stype': {
@@ -372,9 +371,10 @@ def create_table(instrument, columns):
                 "exportDataAsCsv": True,
                 'undoRedoCellEditing': True,
                 'enableBrowserTooltips': True,
+
             },
             columnSize='autoSizeAll',
-
+            columnSizeOptions = {"skipHeader": True},
             style={
                 "height": "500px",
                 "width": "100%",

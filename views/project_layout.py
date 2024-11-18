@@ -22,7 +22,7 @@ except Exception as e:
 
 prefix = config['path']['prefix']
 default_work_lmt = config['path']['work_lmt']
-default_data_lmt = config['path']['data_lmt']
+
 default_session_prefix = os.path.join(default_work_lmt, 'lmtoy_run/lmtoy_')
 init_session = config['session']['init_session']
 
@@ -33,8 +33,7 @@ SHOW_STYLE = {'display': 'block'}
 
 # if any of the update_btn get trigger, update the session list
 update_btn = [Session.SAVE_BTN.value, Session.CONFIRM_DEL.value,
-              Runfile.DEL_BTN.value,
-              ]
+              Runfile.DEL_BTN.value]
 
 layout = html.Div(
     [
@@ -58,12 +57,10 @@ layout = html.Div(
         Output(Runfile.CLONE_BTN.value, 'style'),
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
-        # Output('submit-job-section', 'style',allow_duplicate=True),
     ],
     [Input(Session.SESSION_LIST.value, 'active_item')]
 )
 def default_session(active_session):
-
     if active_session is None:
         # Hide both delete and new session buttons if no session is selected
         return 5 * [HIDE_STYLE]
@@ -75,7 +72,7 @@ def default_session(active_session):
     # Default case where all buttons are visible
     return 5 * [SHOW_STYLE]
 
-# update the session list
+# update session list
 @app.callback(
     [
         Output(Session.SESSION_LIST.value, 'children'),
@@ -102,31 +99,37 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
         triggered_id = ctx.triggered_id
 
         if not pf.check_user_exists():
-            logging.warning("User is not authenticated")
-            return [], False, "User is not authenticated", None, [], None
+            return [], False, "User is not authenticated", no_update,no_update,no_update
 
         pid_path = os.path.join(default_work_lmt, current_user.username)
         try:
             os.makedirs(pid_path, exist_ok=True)
         except OSError as e:
-            logging.error(f"Failed to create directory {pid_path}: {str(e)}")
-            return [], False, f"Failed to create directory: {str(e)}", None, [], None
+            error_message = f"Failed to create directory {pid_path}: {str(e)}"
+            logging.error(error_message)
+            return [], False, error_message, None, [], None
 
         modal_open, message = no_update, ''
+        session_list = get_session_list(init_session, pid_path)
 
         if triggered_id == Session.NEW_BTN.value:
             modal_open = True
+
         elif triggered_id == Session.SAVE_BTN.value:
             message, modal_open = pf.save_session(pid_path, name, active_session)
+
         elif triggered_id == Session.CONFIRM_DEL.value:
             message = pf.delete_session(pid_path, active_session)
             active_session = None if "Successfully" in message else active_session
 
         if triggered_id in update_btn:
-            active_session = None
+            active_session = init_session if active_session is None else active_session
 
-        session_list = get_session_list(init_session, pid_path)
+        # Ensure a valid active session
+        active_session = active_session or init_session
+
         runfile_options, runfile_value = pf.get_runfile_info(active_session, pid_path)
+
         return session_list, modal_open, message, active_session, runfile_options, runfile_value[0]
 
     except Exception as e:
@@ -144,6 +147,7 @@ def update_submit_job_label(active_session):
         return f"Submit Job for {active_session}"
     return "Submit Job"
 
+# display confirmation alert when delete session button is clicked
 @app.callback(
     [
         Output(Session.CONFIRM_DEL.value, 'displayed'),
@@ -158,7 +162,7 @@ def display_confirmation(n_clicks, active_item):
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
 
-# If there is data in the data_lmt folder, show the opten result link
+# If there is data in the folder, show the open result link
 @app.callback(
     Output('view-result-url', 'style'),
     Output('view-result-url', 'href'),
@@ -170,7 +174,6 @@ def show_job_status(active_session):
     if not active_session:
         return no_update
     session_path = pf.get_session_path(current_user.username, active_session)
-
     status,run_btn_disabled, view_result_style,view_result_href = pf.check_job_status(session_path)
     return view_result_style, view_result_href
 # open readme in a new tab when chick view result button
@@ -196,9 +199,8 @@ def enable_run_button(selected_runfile):
         return SHOW_STYLE
     return HIDE_STYLE
 
-
+# submit job
 @app.callback(
-    Output(Runfile.RUN_BTN.value, 'children'),
     Output(Session.SUBMIT_JOB.value, 'children'),
     Input(Runfile.RUN_BTN.value, 'n_clicks'),
     State(Session.RUNFILE_SELECT.value, 'value'),
@@ -206,22 +208,18 @@ def enable_run_button(selected_runfile):
 )
 def submit_job(n_clicks, selected_runfile):
     if not selected_runfile:
-        return '', html.Pre('No runfile selected.')
+        return html.Pre('No runfile selected.')
 
-    # Step 1: Indicate job submission is in progress
-    initial_message = html.Pre('Submitting job...')
-
-    # Perform job submission (mocked here)
     try:
         runfile = os.path.basename(selected_runfile)
         result = pf.execute_remote_command(current_user.username, runfile)
 
         # Step 2: Update UI with the result
         result_message = f"Job submitted successfully!\n{result}"
-        return 'Job submitted!', result_message
+        return result_message
     except Exception as e:
         error_message = html.Pre(f"Error: {e}")
-        return 'Job submission failed!', error_message
+        return error_message
 
 # display selected runfile
 @app.callback(
@@ -339,5 +337,7 @@ def edit_runfile(n_clicks, runfile, data):
         return no_update, no_update
 
     current_runfile = next((value for value in runfile if value), None)
-    data['runfile'] = current_runfile
-    return f"{prefix}{data['instrument']}-edit" , data
+    data['selected_runfile'] = current_runfile
+    edit_url = f"{prefix}{data['instrument']}-edit"
+    print(f"edit_url: {edit_url}")
+    return edit_url , data

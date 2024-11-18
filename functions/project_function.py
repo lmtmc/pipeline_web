@@ -19,10 +19,8 @@ try :
 except Exception as e:
     print(f"Error loading configuration: {e}")
 
-lmtoy_path = config['path']['lmtoy_path']
-
 default_work_lmt = config['path']['work_lmt']
-default_data_lmt = config['path']['data_lmt']
+# default_data_lmt = config['path']['data_lmt']
 default_session_prefix = os.path.join(default_work_lmt, 'lmtoy_run/lmtoy_')
 init_session = config['session']['init_session']
 
@@ -34,13 +32,6 @@ set_user_command = 'export WORK_LMT_USER=pipeline_web'
 dispatch_command = './bin/lmtoy_dispatch.sh'
 
 
-def set_pythonpath():
-    current_pythonpath = os.environ.get('PYTHONPATH', '')
-    new_path = lmtoy_path
-    if new_path not in current_pythonpath:
-        updated_pythonpath = f"{new_path}:{current_pythonpath}" if current_pythonpath else new_path
-        os.environ['PYTHONPATH'] = updated_pythonpath
-set_pythonpath()
 
 # Function to get pid options from the given path
 @lru_cache(maxsize=None)
@@ -260,6 +251,8 @@ def save_runfile(df, runfile_path):
         line = 'SLpipeline.sh'
         for column, value in row.items():
             if value is not None and str(value).strip() != '':
+                if isinstance(value, list):
+                    value = ','.join(map(str, value))
                 if column == 'obsnum(s)':
                     if ',' in value:
                         column = 'obsnums'
@@ -268,6 +261,8 @@ def save_runfile(df, runfile_path):
                 if column == 'exclude_beams':
                     column = 'pix_list'
                     value = exclude_beams(value)
+                if column == 'px_list':
+                    print(f"px_list: {value}")
                 line += f" {column}{separator}{value}"
         lines.append(line)
     with open(runfile_path, 'w') as f:
@@ -477,7 +472,9 @@ def check_job_status(session_path):
     return 'running', True, {'display':'None'}, ''
 
 def get_session_path(username, active_session):
-    return os.path.join(default_data_lmt, username, active_session) if active_session != init_session else os.path.join(default_data_lmt, username)
+    if active_session == init_session:
+        return default_session_prefix + username
+    return os.path.join(default_work_lmt, username, active_session)
 
 def execute_remote_command(pid, runfile):
     # Set up SSH client

@@ -18,8 +18,11 @@ server.config.update(
     SQLALCHEMY_DATABASE_URI='sqlite:///users.db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
-prefix = config['path']['prefix']
+
 db = SQLAlchemy(server)
+
+# dash app configuration
+prefix = config['path']['prefix']
 # enable running the Dash app on the Flask server
 app = dash.Dash(
     __name__,
@@ -45,6 +48,7 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 
+# Flask-Login configuration
 login_manager = LoginManager(server)
 login_manager.login_view = f'{prefix}/login'
 
@@ -81,7 +85,6 @@ class Job(db.Model):
 
 with server.app_context():
     db.create_all()
-
 
 # callback to reload the user object
 @login_manager.user_loader

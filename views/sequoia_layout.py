@@ -206,7 +206,6 @@ def save_edit(n1, n2, table_data, store_data):
         raise PreventUpdate
     triggered_id = ctx.triggered_id
     if triggered_id == f'{INSTRUMENT}-save-btn':
-        print('save the edit')
         pf.save_runfile(table_data, store_data['selected_runfile'])
         return no_update
     return f'{prefix}project'

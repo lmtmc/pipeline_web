@@ -336,6 +336,7 @@ def create_table(instrument, columns):
         "filter": True,
         "sortable": True,
         "resizable": True,
+        "editable": True,
         'checkboxSelection': {
             'function':'params.column == params.columnApi.getAllDisplayedColumns()[0]',
         },
@@ -370,14 +371,6 @@ def create_table(instrument, columns):
                 'undoRedoCellEditing': True,
                 'enableBrowserTooltips': True,
                 'skipHeaderOnAutoSize': True,
-                "onGridReady": {
-                    "function": """
-                        function(params) {
-                            const allColumnIds = params.columnApi.getAllColumns().map(col => col.colId);
-                            params.columnApi.autoSizeColumns(allColumnIds);
-                        }
-                        """
-                },
             },
             # columnSize='sizeToFit',
             # columnSizeOptions = {"skipHeader": True},

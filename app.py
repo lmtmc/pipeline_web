@@ -33,7 +33,7 @@ def create_layout():
             html.Br(),
             html.Div(id='body-content', className='content-container'),
             dcc.Location(id='url', refresh=False),
-            dcc.Store(id='data-store', data=DATA_STORE_INIT, storage_type='session'),
+            dcc.Store(id='data-store', data=DATA_STORE_INIT, storage_type='local'),
         ],
         id='main-container',
         className='main-container'
@@ -54,6 +54,10 @@ app.layout = create_layout()
     prevent_initial_call=True
 )
 def update_page(pathname,data):
+    print('data',data)
+    if not data:
+        data = DATA_STORE_INIT
+
     is_authenticated = current_user.is_authenticated
     username = current_user.username if is_authenticated else None
     navbar = ui.create_navbar(is_authenticated, username)

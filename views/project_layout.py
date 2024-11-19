@@ -32,8 +32,9 @@ HIDE_STYLE = {'display': 'none'}
 SHOW_STYLE = {'display': 'block'}
 
 # if any of the update_btn get trigger, update the session list
-update_btn = [Session.SAVE_BTN.value, Session.CONFIRM_DEL.value,
-              Runfile.DEL_BTN.value]
+update_btn = [
+    Session.SAVE_BTN.value, Session.CONFIRM_DEL.value, Runfile.DEL_BTN.value
+]
 
 layout = html.Div(
     [
@@ -339,5 +340,16 @@ def edit_runfile(n_clicks, runfile, data):
     current_runfile = next((value for value in runfile if value), None)
     data['selected_runfile'] = current_runfile
     edit_url = f"{prefix}{data['instrument']}-edit"
-    print(f"edit_url: {edit_url}")
     return edit_url , data
+
+# if data store has selected runfile, set the runfile select value
+@app.callback(
+    Output({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    Input('data-store', 'data'),
+)
+def preselect_runfile(data):
+    # Check if there is a previously selected runfile in the data-store
+    if data and 'selected_runfile' in data:
+        return [None,data['selected_runfile']]
+    # If no runfile is selected, ensure all radio buttons are cleared
+    return [None, None]

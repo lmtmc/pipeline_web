@@ -54,7 +54,6 @@ app.layout = create_layout()
     prevent_initial_call=True
 )
 def update_page(pathname,data):
-    print('data',data)
     if not data:
         data = DATA_STORE_INIT
 

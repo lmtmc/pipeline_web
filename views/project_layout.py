@@ -346,6 +346,7 @@ def edit_runfile(n_clicks, runfile, data):
 @app.callback(
     Output({'type': 'runfile-radio', 'index': ALL}, 'value'),
     Input('data-store', 'data'),
+    #prevent_initial_call=True
 )
 def preselect_runfile(data):
     # Check if there is a previously selected runfile in the data-store

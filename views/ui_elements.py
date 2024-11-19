@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 from dash_ag_grid import AgGrid
 from flask_login import current_user
 from functions import project_function as pf
-from enum import Enum, auto
+from enum import Enum
 from config_loader import load_config
 try :
     config = load_config()
@@ -124,9 +124,9 @@ class Storage(Enum):
 session_modal = pf.create_modal(
     'Create a new session',
     [
-        html.Div(dbc.Input(id=Session.NAME_INPUT.value, placeholder='Enter a session name', type='text',
-                           # min=0, max=100, step=1,
-                           # type='number'
+        html.Div(dbc.Input(id=Session.NAME_INPUT.value, placeholder='Enter a session number',
+                           min=0, max=100, step=1,
+                           type='number'
                            )),
         html.Div(id=Session.MESSAGE.value)
     ],
@@ -362,19 +362,26 @@ def create_table(instrument, columns):
             defaultColDef=default_col_def,
             dashGridOptions={
                 "pagination": True,
-                # "paginationPageSize": 10,
                 "rowSelection": "multiple",
                 "rowMultiSelectWithClick": True,
                 "suppressRowClickSelection": True,
                 "animateRows": True,
                 "enableCellTextSelection": True,
-                "exportDataAsCsv": True,
                 'undoRedoCellEditing': True,
                 'enableBrowserTooltips': True,
-
+                'skipHeaderOnAutoSize': True,
+                "onGridReady": {
+                    "function": """
+                        function(params) {
+                            const allColumnIds = params.columnApi.getAllColumns().map(col => col.colId);
+                            params.columnApi.autoSizeColumns(allColumnIds);
+                        }
+                        """
+                },
             },
-            columnSize='autoSizeAll',
-            columnSizeOptions = {"skipHeader": True},
+            # columnSize='sizeToFit',
+            # columnSizeOptions = {"skipHeader": True},
+
             style={
                 "height": "500px",
                 "width": "100%",

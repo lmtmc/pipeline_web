@@ -5,6 +5,13 @@ import functions.project_function as pf
 from my_server import app
 from views.ui_elements import create_table,common_columns,create_parameter_header
 import dash_bootstrap_components as dbc
+from config_loader import load_config
+try :
+    config = load_config()
+except Exception as e:
+    print(f"Error loading configuration: {e}")
+
+prefix = config['path']['prefix']
 
 INSTRUMENT = 'sequoia'
 SEQUOIA_COLUMNS = common_columns + [
@@ -202,7 +209,7 @@ def save_edit(n1, n2, table_data, store_data):
         print('save the edit')
         pf.save_runfile(table_data, store_data['selected_runfile'])
         return no_update
-    return '/pipeline_web/project'
+    return f'{prefix}project'
 #
 # can't select rows with different _s values
 @app.callback(

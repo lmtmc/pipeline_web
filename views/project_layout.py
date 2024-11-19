@@ -80,7 +80,7 @@ def default_session(active_session):
         Output(Session.MESSAGE.value, 'children'),
         Output(Session.SESSION_LIST.value, 'active_item'),
         Output(Session.RUNFILE_SELECT.value, 'options'),
-        Output(Session.RUNFILE_SELECT.value, 'value'),
+        # Output(Session.RUNFILE_SELECT.value, 'value'),
     ],
     [
         Input(Session.NEW_BTN.value, 'n_clicks'),
@@ -99,7 +99,7 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
         triggered_id = ctx.triggered_id
 
         if not pf.check_user_exists():
-            return [], False, "User is not authenticated", no_update,no_update,no_update
+            return [], False, "User is not authenticated", no_update,no_update
 
         pid_path = os.path.join(default_work_lmt, current_user.username)
         try:
@@ -107,7 +107,7 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
         except OSError as e:
             error_message = f"Failed to create directory {pid_path}: {str(e)}"
             logging.error(error_message)
-            return [], False, error_message, None, [], None
+            return [], False, error_message, None, []
 
         modal_open, message = no_update, ''
         session_list = get_session_list(init_session, pid_path)
@@ -130,7 +130,7 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
 
         runfile_options, runfile_value = pf.get_runfile_info(active_session, pid_path)
 
-        return session_list, modal_open, message, active_session, runfile_options, runfile_value[0]
+        return session_list, modal_open, message, active_session, runfile_options
 
     except Exception as e:
         logging.error(f"Error in update_session_display: {str(e)}")

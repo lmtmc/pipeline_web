@@ -239,11 +239,7 @@ def create_new_row(state_values, table_column):
             new_row[column] = value
     return new_row
 
-
-
-
 # save revised data to a runfile
-# todo format each value and not write if there is no value for the column
 def save_runfile(df, runfile_path):
     separator = '='
     lines = []

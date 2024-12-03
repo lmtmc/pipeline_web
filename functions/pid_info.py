@@ -14,9 +14,11 @@ def get_source(default_work_lmt, pid):
     pid_path = os.path.join(default_work_lmt, 'lmtoy_run', f'lmtoy_{pid}')
 
     mk_runs_file = os.path.join(pid_path, 'mk_runs.py')
+    print(f'mk_runs_file: {mk_runs_file}')
     result = subprocess.run([python_path, mk_runs_file], capture_output=True,
                             text=True, cwd=pid_path)
     # checks if the command ran successfully(return code 0)
+    print(f'result: {result}')
     if result.returncode == 0:
         output = result.stdout  # converts the stdout string to a regular string
     else:

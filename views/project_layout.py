@@ -405,6 +405,7 @@ def update_obsnum_options(source, selected_rows, data):
         raise PreventUpdate
     selected_row_data = selected_rows[0] if selected_rows else {}
     obsnum_options = data.get('source', {}).get(source)
+    obsnum_options = obsnum_options or []
     return [{'label': str(o), 'value': str(o)} for o in obsnum_options], selected_row_data.get('obsnum', None)
 
 #  todo the edit layout will include all the parameters for the instrument

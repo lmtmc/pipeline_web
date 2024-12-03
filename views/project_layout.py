@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import flask
+import pandas as pd
 from dash import html, Input, Output, State, ALL, ctx, no_update, dcc
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -54,24 +55,29 @@ layout = html.Div(
 @app.callback(
     [
         Output(Runfile.DEL_BTN.value, 'style'),
-        Output(Runfile.EDIT_BTN.value, 'style'),
         Output(Runfile.CLONE_BTN.value, 'style'),
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
+        Output('data-store', 'data'),
     ],
-    [Input(Session.SESSION_LIST.value, 'active_item')]
+    Input(Session.SESSION_LIST.value, 'active_item'),
+    State('data-store', 'data'),
 )
-def default_session(active_session):
+def default_session(active_session, data_store):
+    # Update the selected session in the data store
+    data_store['selected_session'] = active_session
+
     if active_session is None:
-        # Hide both delete and new session buttons if no session is selected
-        return 5 * [HIDE_STYLE]
+        # Hide all buttons if no session is selected
+        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, data_store
 
     if active_session == init_session:
-        # Hide session delete and runfile buttons for the default session
-        return [HIDE_STYLE] * 4 + 1*[SHOW_STYLE]
+        # Hide delete buttons and show only the new session button for the default session
+        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, SHOW_STYLE, data_store
 
-    # Default case where all buttons are visible
-    return 5 * [SHOW_STYLE]
+    # Default case: Show all buttons
+    return SHOW_STYLE, SHOW_STYLE, SHOW_STYLE, SHOW_STYLE, data_store
+
 
 # update session list
 @app.callback(
@@ -81,7 +87,6 @@ def default_session(active_session):
         Output(Session.MESSAGE.value, 'children'),
         Output(Session.SESSION_LIST.value, 'active_item'),
         Output(Session.RUNFILE_SELECT.value, 'options'),
-        # Output(Session.RUNFILE_SELECT.value, 'value'),
     ],
     [
         Input(Session.NEW_BTN.value, 'n_clicks'),
@@ -227,27 +232,41 @@ def submit_job(n_clicks, selected_runfile):
     [
         Output(Runfile.CONTENT_TITLE.value, 'children'),
         Output(Runfile.CONTENT_DISPLAY.value, 'style'),
-        Output(Runfile.CONTENT.value, 'value') # if output textarea
+        Output('runfile-table', 'rowData', allow_duplicate=True),
+        Output('runfile-table', 'columnDefs', allow_duplicate=True),
+        Output('data-store', 'data', allow_duplicate=True)
     ],
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
         Input(Runfile.CONFIRM_DEL_ALERT.value, 'submit_n_clicks'),
     ],
+    State('data-store', 'data'),
     prevent_initial_call=True
 )
-def display_runfile_content(selected_runfile, del_runfile_btn):
+def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     if not ctx.triggered:
         raise PreventUpdate
     current_runfile = next((value for value in selected_runfile if value), None)
     if not current_runfile:
-        return '', HIDE_STYLE, ''
+        return '', HIDE_STYLE, '','',data_store
 
     runfile_title = pf.get_runfile_title(current_runfile, init_session)
-    runfile_content = pf.df_runfile(current_runfile)[1]
+    runfile_data,runfile_content = pf.df_runfile(current_runfile)
+    row_data = runfile_data.to_dict('records')
+    column_defs = [
+        {
+            'headerName': c,
+            'field': c,
+            'filter': True,
+            'sortable': True,
+            'headerTooltip': f'{c} column',
+        } for c in runfile_data.columns
+    ]
 
     if ctx.triggered_id == Runfile.CONFIRM_DEL_ALERT.value:
         pf.del_runfile(current_runfile)
-    return runfile_title,SHOW_STYLE, runfile_content
+    data_store['selected_runfile'] = current_runfile
+    return runfile_title,SHOW_STYLE, row_data, column_defs,data_store
 
 # open a modal if clone-runfile button
 @app.callback(
@@ -322,35 +341,172 @@ def runfile_del_display_confirmation(n_clicks, selected_runfile):
             return False, ''
     else:
         return False, ''
-
-# If edit was clicked, show the modal
+# If selected rows, show the edit button else hide it
 @app.callback(
-    Output('edit-url', 'pathname'),
-    Output('data-store', 'data'),
-    Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+    Output(Runfile.EDIT_BTN.value, 'style'),
+    Input('runfile-table', 'selectedRows'),
+    State(Session.SESSION_LIST.value, 'active_item'),
+    prevent_initial_call=True
+)
+def show_edit_button(selected_rows, active_session):
+    if selected_rows and active_session != init_session:
+        return SHOW_STYLE
+    return HIDE_STYLE
+
+# if selected rows, open the edit layout, if eidt-apply or edit-cancel is clicked, close the layout
+@app.callback(
+    Output('parameter-edit-modal', 'is_open'),
     [
-        State({'type': 'runfile-radio', 'index': ALL}, 'value'),
-        State('data-store', 'data')
+        Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+        Input('edit-apply', 'n_clicks'),
+        Input('edit-cancel', 'n_clicks')
+    ],
+    prevent_initial_call=True
+)
+def show_edit_layout(n1, n2, n3):
+    triggered_id = ctx.triggered_id
+    if triggered_id == Runfile.EDIT_BTN.value:
+        return True
+    elif triggered_id in ['edit-apply', 'edit-cancel']:
+        return False
+    return False
+
+# if the parameter-edit-layout is open, populate the source option from datastore
+@app.callback(
+    [
+        Output('_s-dropdown', 'options'),
+        Output('_s-dropdown', 'value')
+    ],
+    Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+    State('runfile-table', 'selectedRows'),
+    State('data-store', 'data'),
+)
+def source_option(n, selected_rows, data):
+    if not n:
+        raise PreventUpdate
+    options = [{'label': str(s), 'value': str(s)} for s in data.get('source', {}).keys()]
+    selected_row_data = selected_rows[0] if selected_rows else {}
+    source = selected_row_data.get('_s', None)
+    return options, source
+
+# update the obsnum options based on the source value in the cell
+@app.callback(
+    [
+        Output('obsnum-dropdown', 'options'),
+        Output('obsnum-dropdown', 'value')
+    ],
+    Input('_s-dropdown', 'value'),
+    State('runfile-table', 'selectedRows'),
+    State('data-store', 'data'),
+    prevent_initial_call=True
+)
+def update_obsnum_options(source, selected_rows, data):
+    if not source:
+        raise PreventUpdate
+    selected_row_data = selected_rows[0] if selected_rows else {}
+    obsnum_options = data.get('source', {}).get(source)
+    return [{'label': str(o), 'value': str(o)} for o in obsnum_options], selected_row_data.get('obsnum', None)
+
+#  todo the edit layout will include all the parameters for the instrument
+@app.callback(
+    [
+        Output('badcb-input', 'value'),
+        Output('srdp-input', 'value'),
+        Output('admit-radio', 'value'),
+        Output('speczoom-input', 'value'),
+        Output('other_rsr-input', 'value'),
+        Output('other_sequoia-input', 'value'),
+    ],
+    [
+        Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+    ],
+    [
+        State('runfile-table', 'selectedRows'),
     ],
 )
-def edit_runfile(n_clicks, runfile, data):
-    if n_clicks is None:
-        return no_update, no_update
+def show_edit_layout(n1, selected_rows):
+    if not selected_rows:
+        return no_update
 
-    current_runfile = next((value for value in runfile if value), None)
-    data['selected_runfile'] = current_runfile
-    edit_url = f"{prefix}{data['instrument']}-edit"
-    return edit_url , data
+    selected_row_data = selected_rows[0] if selected_rows else {}
 
-# if data store has selected runfile, set the runfile select value
+    badcb = selected_row_data.get('badcb', None),
+    srdp = selected_row_data.get('srdp', None),
+    admit = selected_row_data.get('admit', None),
+    speczoom = selected_row_data.get('speczoom', None),
+    other_rsr_bs = selected_row_data.get('other_rsr_bs', None),
+    other_sequoia = selected_row_data.get('other_sequoia', None)
+    return badcb, srdp, admit[0], speczoom, other_rsr_bs, other_sequoia
+
+# todo if click the apply button, update the selected row data with all the parameters with values
 @app.callback(
-    Output({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    Input('data-store', 'data'),
-    #prevent_initial_call=True
+    Output('runfile-table', 'columnDefs'),
+    Output('runfile-table', 'rowData'),
+    Input('edit-apply', 'n_clicks'),
+    State('runfile-table', 'selectedRows'),
+    State('runfile-table', 'rowData'),
+    State('obsnum-dropdown', 'value'),
+    State('_s-dropdown', 'value'),
+    State('badcb-input', 'value'),
+    State('srdp-input', 'value'),
+    State('admit-radio', 'value'),
+    State('speczoom-input', 'value'),
+    State('other_rsr-input', 'value'),
+    State('other_sequoia-input', 'value'),
+    State('data-store', 'data'),
+    prevent_initial_call=True
 )
-def preselect_runfile(data):
-    # Check if there is a previously selected runfile in the data-store
-    if data and 'selected_runfile' in data:
-        return [None,data['selected_runfile']]
-    # If no runfile is selected, ensure all radio buttons are cleared
-    return [None, None]
+def update_selected_rows(n_clicks, selected_rows,
+                         row_data, obsnum, source, badcb, srdp, admit, speczoom, other_rsr_bs, other_sequoia,data_store):
+    if not n_clicks or not selected_rows:
+        raise PreventUpdate
+
+    selected_row = selected_rows[0]
+    selected_index = selected_row['index']
+
+    # Collect new values for the selected row
+    new_values = {
+        'index': selected_index,
+        'obsnum': obsnum,
+        '_s': source,
+        'badcb': badcb[0] if isinstance(badcb, list) else badcb,
+        'srdp': srdp[0] if isinstance(srdp, list) else srdp,
+        'admit': admit[0] if isinstance(admit, list) else admit,
+        'speczoom': speczoom[0] if isinstance(speczoom, list) else speczoom,
+        'other_rsr_bs': other_rsr_bs[0] if isinstance(other_rsr_bs, list) else other_rsr_bs,
+        'other_sequoia': other_sequoia[0] if isinstance(other_sequoia, list) else other_sequoia,
+    }
+
+    # Remove keys with '' or None values from new_values
+    new_values = {key: value for key, value in new_values.items() if value not in [None, '']}
+
+    # Update the selected row: if new_values has more columns than selected_row, add the extra columns to the table
+    # if new_values has less columns than selected_row, display '' in the cell of the missing columns
+    updated_row_data = row_data.copy()
+    updated_row_data[selected_index] = new_values
+
+    # Define the explicit column order
+    explicit_order = ['index', 'obsnum', '_s', 'badcb', 'srdp', 'admit', 'speczoom', 'other_rsr_bs', 'other_sequoia']
+
+    # get the columns from the updated_row_data where the column has a value
+    value_columns = {
+        key for row in updated_row_data for key, value in row.items() if value not in [None, '']
+    }
+    # Add any extra columns dynamically, keeping the order consistent with explicit_order
+    all_columns = [col for col in explicit_order if col in value_columns] + [
+        col for col in value_columns if col not in explicit_order
+    ]
+    # Create columnDefs based on the new values
+    column_defs = [
+        {
+            'headerName': c,
+            'field': c,
+            'filter': True,
+            'sortable': True,
+            'headerTooltip': f'{c} column',
+        } for c in all_columns
+    ]
+    runfile = data_store.get('selected_runfile')
+    if runfile:
+        pf.save_runfile(pd.DataFrame(updated_row_data), runfile)
+    return column_defs, updated_row_data

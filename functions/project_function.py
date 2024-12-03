@@ -197,31 +197,6 @@ def add_runfile(runfile_path, name):
         # If the runfile already exists, inform the user
         return False, f'Runfile {name} already exists at {runfile_path}'
 
-
-def update_df_with_state_values(df, selected_rows, state_values, table_column):
-    # Log or print the DataFrame and selected rows for debugging
-    print("Before update:")
-    print(df)
-    print("Selected rows:", selected_rows)
-
-    for i, column in enumerate(table_column[2:]):
-        if state_values[i + 2] is not None and state_values[i + 2] != []:
-            value = state_values[i + 2]
-            if i == 1:  # Special handling for beam values
-                filtered_beam = filter(bool, value)
-                sorted_beam = sorted(filtered_beam, key=int)
-                value = ",".join(sorted_beam)
-            elif i == 2:
-                value = str(value)
-
-            # Ensure that the selected_rows exist in the DataFrame
-            if all(row in df.index for row in selected_rows):
-                df.loc[selected_rows, column] = value
-            else:
-                print(f"Selected rows not found in DataFrame: {selected_rows}")
-    return df
-
-
 def create_new_row(state_values, table_column):
     new_row = {key: None for key in table_column}
     for i, column in enumerate(table_column):
@@ -238,32 +213,6 @@ def create_new_row(state_values, table_column):
                 value = f'[{value}]'
             new_row[column] = value
     return new_row
-
-# save revised data to a runfile
-def save_runfile(df, runfile_path):
-    separator = '='
-    lines = []
-    for row in df:
-        line = 'SLpipeline.sh'
-        for column, value in row.items():
-            if value is not None and str(value).strip() != '':
-                if isinstance(value, list):
-                    value = ','.join(map(str, value))
-                if column == 'obsnum(s)':
-                    if ',' in value:
-                        column = 'obsnums'
-                    else:
-                        column = 'obsnum'
-                if column == 'exclude_beams':
-                    column = 'pix_list'
-                    value = exclude_beams(value)
-                if column == 'px_list':
-                    print(f"px_list: {value}")
-                line += f" {column}{separator}{value}"
-        lines.append(line)
-    with open(runfile_path, 'w') as f:
-        f.write('\n'.join(lines))
-
 
 def exclude_beams(pix_list):
     if pix_list:
@@ -391,11 +340,42 @@ def df_runfile(filename):
             return pd.DataFrame(), content
 
         df = pd.DataFrame(data)
+        df.reset_index(inplace=True)
         return df, content
     except Exception as e:
         return pd.DataFrame(), content
     else:
         return pd.DataFrame(), ''
+
+# save revised data to a runfile
+def save_runfile(df, runfile_path):
+    print(f"runfile_path: {runfile_path}")
+    separator = '='
+    lines = []
+
+    # Iterate over DataFrame rows using iterrows, which doesn't include the index
+    for _, row in df.iterrows():
+        line = 'SLpipeline.sh'
+        for column, value in row.items():
+            if value is not None and str(value).strip() != '' and column != 'index':
+                if isinstance(value, list):
+                    value = ','.join(map(str, value))
+                if column == 'obsnum(s)':
+                    if ',' in value:
+                        column = 'obsnums'
+                    else:
+                        column = 'obsnum'
+                if column == 'exclude_beams':
+                    column = 'pix_list'
+                    value = exclude_beams(value)
+                if column == 'px_list':
+                    print(f"px_list: {value}")
+                line += f" {column}{separator}{value}"
+        lines.append(line)
+
+    with open(runfile_path, 'w') as f:
+        f.write('\n'.join(lines))
+
 
 def save_session(pid_path, name, active_session):
     try:
@@ -509,3 +489,32 @@ def execute_remote_command(pid, runfile):
         # Close the connection
         print("Closing SSH connection.")
         client.close()
+
+def extract_all_columns(row_data):
+    all_columns = set()
+    for row in row_data:
+        for key, value in row.items():
+            if value is not None:
+                all_columns.add(key)
+    return list(all_columns)
+
+def generate_column_defs(columns):
+    return [
+        {
+            "field": col,
+            "headerName": col,
+            # "editable": True,
+            "resizable": True,
+            "sortable": True,
+            "filter": True,
+        }
+        for col in columns
+    ]
+
+def normalize_row_data(row_data, columns):
+    normalized_data = []
+    for row in row_data:
+        normalized_row = {col: row.get(col, None) for col in columns}
+        normalized_data.append(normalized_row)
+    return normalized_data
+

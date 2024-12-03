@@ -204,7 +204,65 @@ submit_job_layout = html.Div(
             ),
         html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
 ])
-#
+def create_dropdown_parameter(col):
+    return html.Div(
+        [
+            dbc.Label(f'{col}:'),
+            dcc.Dropdown(id=f'{col}-dropdown', placeholder=f'Select {col}', className='mb-3'),
+        ]
+    )
+def create_radio_parameter(col, options):
+    return html.Div(
+        [
+            dbc.Label(f'{col}:'),
+            dcc.RadioItems(id=f'{col}-radio', options=options,className='mb-3', inline=True),
+        ]
+    )
+def create_input_parameter(col):
+    return html.Div(
+        [
+            dbc.Label(f'{col}:'),
+            dcc.Input(id=f'{col}-input', type='text', placeholder=f'Enter {col}', className='mb-3'),
+        ]
+    )
+def create_checkbox_parameter(col):
+    return html.Div(
+        [
+            dbc.Label(f'{col}:'),
+            dcc.Checklist(id=f'{col}-checkbox', className='mb-3'),
+        ]
+    )
+
+parameter_layout = html.Div(
+    [
+        dbc.Row(
+            [
+                dbc.Col(create_dropdown_parameter('obsnum'),width=2),
+                dbc.Col(create_dropdown_parameter('_s'),width=2),
+                dbc.Col(create_input_parameter('badcb'),width='auto'),
+                dbc.Col(create_input_parameter('srdp'),width='auto'),
+                dbc.Col(create_radio_parameter('admit',['0','1']),width='auto'),
+                dbc.Col(create_input_parameter('speczoom'),width='auto'),
+                dbc.Col(create_input_parameter('other_rsr'),width='auto'),
+                dbc.Col(create_input_parameter('other_sequoia'),width='auto'),
+            ],           # className='d-flex justify-content-between'
+        ),
+    ],id='parameter-layout')
+
+parameter_layout_modal = dbc.Modal(
+    [
+        dbc.ModalHeader('Edit Parameters'),
+        dbc.ModalBody(
+            html.Div([
+                parameter_layout,
+              ],id='layouts'),),
+        dbc.ModalFooter(
+                dbc.Row([
+                    dbc.Col(dbc.Button('Apply', id='edit-apply', color='primary', className='mt-3'), width='auto'),
+                    dbc.Col(dbc.Button('Cancel', id='edit-cancel', color='danger', className='mt-3'), width='auto'),
+                    ])
+        )
+    ],id='parameter-edit-modal', size='xl', centered=True, scrollable=True,backdrop='static')
 
 runfile_layout = html.Div(
     dbc.Card(
@@ -225,11 +283,45 @@ runfile_layout = html.Div(
                 )
             ),
             dbc.CardBody(
-                html.Div(
+                [
+                    html.Div(
                     [
-                        dcc.Textarea(id=Runfile.CONTENT.value, className='runfile-content',readOnly=True),
                         dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
+                        AgGrid(
+                            id='runfile-table',
+                            rowData=[],
+                            defaultColDef={
+                                            "filter": True,
+                                            "checkboxSelection": {
+                                                "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                                            },
+                                            "headerCheckboxSelection": {
+                                                "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                                            }
+                                        },
+                            dashGridOptions={
+                                # "pagination": True,
+                                "rowSelection": "multiple",
+                                "rowMultiSelectWithClick": True,
+                                "suppressRowClickSelection": True,
+                                # "animateRows": True,
+                                # "enableCellTextSelection": True,
+                                # 'undoRedoCellEditing': True,
+                                'enableBrowserTooltips': True,
+                                # 'skipHeaderOnAutoSize': True,
+                            },
+                            # columnSize='sizeToFit',
+                            # columnSizeOptions = {"skipHeader": True},
+
+                            style={
+                                "height": "500px",
+                                "width": "100%",
+                            },
+                            className="ag-theme-alpine",
+                        ),
                     ]),
+                parameter_layout_modal,
+                ],
             ),
             clone_runfile_modal,
             dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
@@ -301,6 +393,8 @@ def create_table(instrument, columns):
         },
 
     }
+    # Add an "index" column explicitly
+    columns.insert(0, "index")
 
     column_defs = []
 
@@ -316,12 +410,14 @@ def create_table(instrument, columns):
 
         # Construct column definition
         column_def = {
-            "headerName": col,
+            # "headerName": col,
             "field": col,
+            "valueGetter": {"function": "params.node.rowIndex + 1"},
             "resizable": True,
             # "sortable": True,
             "filter": True,
-            "editable": True,
+            "editable": False,
+            # "valueGetter": f"params.data.{col}",
             "cellEditorPopup": True,
             "cellEditor": cell_editor,
             "cellEditorParams": cell_editor_params,
@@ -360,7 +456,6 @@ def create_table(instrument, columns):
             id=f'{instrument}-table',
             columnDefs=column_defs,
             rowData=[],
-            defaultColDef=default_col_def,
             dashGridOptions={
                 "pagination": True,
                 "rowSelection": "multiple",
@@ -374,12 +469,11 @@ def create_table(instrument, columns):
             },
             # columnSize='sizeToFit',
             # columnSizeOptions = {"skipHeader": True},
-
+            getRowId="params.data.index",
             style={
                 "height": "500px",
                 "width": "100%",
             },
-            className="ag-theme-alpine",
         ),
 
         html.Br(),

@@ -1,15 +1,12 @@
 import logging
 import os
+import re
 import shutil
-import threading
 from functools import lru_cache
-from pathlib import Path
 import dash_bootstrap_components as dbc
 import paramiko
 from flask_login import current_user
 from dash import no_update, html
-import subprocess
-import ast
 import pandas as pd
 from config_loader import load_config
 
@@ -30,7 +27,7 @@ username = config['ssh']['username']
 # Define the commands
 set_user_command = 'export WORK_LMT_USER=pipeline_web'
 dispatch_command = './bin/lmtoy_dispatch.sh'
-
+mk_runs_command = './bin/lmtoy_mk_runs.sh'
 
 
 # Function to get pid options from the given path
@@ -70,10 +67,6 @@ def ensure_path_exists(path):
     print(f"Path {path} exists")
     return True
 
-
-
-
-
 # find files with prefix
 def find_files(folder_path, prefix):
     if not folder_path:
@@ -88,7 +81,6 @@ def find_files(folder_path, prefix):
 
     return sorted(filtered_files)
 
-
 def find_runfiles(folder_path, prefix):
     matching_files = find_files(folder_path, prefix)
     if not matching_files:
@@ -97,11 +89,6 @@ def find_runfiles(folder_path, prefix):
         if matching_files:
             print(f"Matching files: {matching_files}")
     return matching_files
-
-
-def make_tooltip(content, target):
-    return html.Div(dbc.Tooltip(content, target=target, className='large-tooltip', placement='bottom'))
-
 
 # get the session names and their paths in a folder
 def get_session_info(default_session, pid_path):
@@ -137,45 +124,6 @@ def get_session_list(default_session, pid_path):
         for session in session_info
     ]
 
-def clone_runfile(runfile, name):
-    if not name:
-        return False, "Please input a name!"
-    new_name_path = os.path.join(Path(runfile).parent, name)
-    print(f'new_name_path: {new_name_path}')
-    # Check if the session directory already exists
-    if os.path.exists(new_name_path):
-        # If the directory not exist, create it
-        return True, f'Runfile {name} already exists', True
-    shutil.copy(runfile, new_name_path)
-    return False, f"Runfile {name} created successfully!", False
-
-
-def del_session(folder_path):
-    # Check if the folder exists
-    if os.path.exists(folder_path):
-        # If it exists, delete the folder and all its contents
-        shutil.rmtree(folder_path)
-        return False, f"The folder {folder_path} has been deleted successfully."
-    else:
-        print(f"The folder {folder_path} does not exist.")
-
-
-# helper function for session display
-def handle_new_session():
-    return True, ''
-
-def handle_delete_session(pid_path, active_session):
-    session_path = os.path.join(pid_path, active_session)
-    del_session(session_path)
-    return "Session deleted successfully!"
-
-
-def handle_delete_runfile(stored_data):
-    del_runfile(stored_data['runfile'])
-    return "Runfile deleted successfully"
-
-
-
 def del_runfile(runfile):
     # Check if the file exists
     if os.path.exists(runfile):
@@ -187,33 +135,6 @@ def del_runfile(runfile):
         print(f"The file {runfile} does not exist.")
 
 
-def add_runfile(runfile_path, name):
-    new_runfile_path = os.path.join(runfile_path, name)
-    # Attempt to create the new runfile
-    try:
-        open(new_runfile_path, 'x').close()
-        return True, f"Runfile {name} has been created successfully."
-    except FileExistsError:
-        # If the runfile already exists, inform the user
-        return False, f'Runfile {name} already exists at {runfile_path}'
-
-def create_new_row(state_values, table_column):
-    new_row = {key: None for key in table_column}
-    for i, column in enumerate(table_column):
-        if state_values[i] is not None:
-            value = state_values[i]
-            # Special handling for specific columns
-            if i == 1:
-                value = '.'.join(value)
-            if i == 3:
-                filtered_beam = filter(bool, value)
-                sorted_beam = sorted(filtered_beam, key=int)
-                value = ",".join(sorted_beam)
-            elif i == 4:
-                value = f'[{value}]'
-            new_row[column] = value
-    return new_row
-
 def exclude_beams(pix_list):
     if pix_list:
         beams = pix_list.split(',')
@@ -222,35 +143,6 @@ def exclude_beams(pix_list):
         return ','.join(exclude_beams)
     else:
         return pix_list
-
-
-def table_layout(table_data):
-    output = table_data
-    output[1] = table_data[1].split(',')
-    # 1,2,3 to ['1', '2', '3']
-    if output[3]:
-        output[3] = table_data[3].split(',')
-    if output[4]:
-        output[4] = ast.literal_eval(output[4])
-
-    return output
-
-def layout_table(layout_data):
-    output = layout_data
-    output[1] = ",".join(layout_data[1])
-
-    if output[3]:
-        filtered_beam = filter(bool, layout_data[3])
-        sorted_beam = sorted(filtered_beam, key=int)
-
-        output[3] = ",".join(sorted_beam)
-    else:
-        output[3] = ''
-    if output[4]:
-        output[4] = f'[{layout_data[4]}]'
-
-    return output
-
 
 def create_modal(header_label, body_elements, footer_elements, modal_id):
     return dbc.Modal(
@@ -266,52 +158,6 @@ def get_runfile_title(runfile_path, init_session):
     session_string = next((part for part in parts if 'Session' in part), init_session).upper()
     runfile_title = os.path.basename(runfile_path)
     return f'{session_string}: {runfile_title}'
-
-
-def get_selected_runfile(ctx):
-    """Determine the selected runfile based on trigger."""
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if 'runfile-radio' in trigger_id:
-        return ctx.triggered[0]['value']
-    # elif data_store.get('runfile') and os.path.exists(data_store['runfile']):
-    #     return data_store['runfile']
-    return None
-
-# def run_job_background(pid, runfiles):
-#     if isinstance(runfiles, str):
-#         runfiles = [runfiles]
-#     results = []
-#
-#     # Define a helper function to capture and append results
-#     def job_runner(runfile):
-#         result = submit_job(pid, runfile)
-#         results.append(result)
-#
-#     # Start a new thread for each runfile
-#     for runfile in runfiles:
-#         job_thread = threading.Thread(target=job_runner, args=(runfile,), daemon=True)
-#         job_thread.start()
-#
-#     return results
-#
-#
-# def submit_job(pid, runfile):
-#     try:
-#         # Connect via SSH
-#         ssh_process = subprocess.run(
-#             ssh_command.split(),
-#             input=f'{set_user_command}; {dispatch_command} {pid} {runfile}',
-#             capture_output=True, text=True, shell=True
-#         )
-#
-#         # Check for successful execution
-#         if ssh_process.returncode == 0:
-#             return ssh_process.stdout
-#         else:
-#             return ssh_process.stderr
-#     except Exception as e:
-#         return str(e)
-
 
 def make_tooltip(content, target):
     return html.Div(dbc.Tooltip(content, target=target, className='large-tooltip', placement='bottom'))
@@ -452,7 +298,7 @@ def get_session_path(username, active_session):
         return default_session_prefix + username
     return os.path.join(default_work_lmt, username, active_session)
 
-def execute_remote_command(pid, runfile):
+def execute_remote_submit(pid, runfile):
     # Set up SSH client
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -490,31 +336,62 @@ def execute_remote_command(pid, runfile):
         print("Closing SSH connection.")
         client.close()
 
-def extract_all_columns(row_data):
-    all_columns = set()
-    for row in row_data:
-        for key, value in row.items():
-            if value is not None:
-                all_columns.add(key)
-    return list(all_columns)
+def execute_mk_runs(pid):
+    # Set up SSH client
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-def generate_column_defs(columns):
-    return [
-        {
-            "field": col,
-            "headerName": col,
-            # "editable": True,
-            "resizable": True,
-            "sortable": True,
-            "filter": True,
-        }
-        for col in columns
-    ]
+    # Create the full command to run remotely in the background with nohup
+    full_command = f"{set_user_command} && nohup {mk_runs_command} {pid}"
+    print(f"Full Command: {full_command}")
+    try:
+        # Connect to the SSH server
+        client.connect(hostname=hostname, username=username)
+        print("SSH connection established.")
 
-def normalize_row_data(row_data, columns):
-    normalized_data = []
-    for row in row_data:
-        normalized_row = {col: row.get(col, None) for col in columns}
-        normalized_data.append(normalized_row)
-    return normalized_data
+        # Execute the command in the background
+        stdin, stdout, stderr = client.exec_command(full_command)
 
+        # Get any initial output or error messages
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+
+        # Print output and error for debugging
+        print("Initial Output:", output)
+        print("Initial Error:", error)
+
+        # Inform that the command was sent successfully
+        print("Command sent to run in the background.")
+        return {"returncode": 0, "stdout": output, "stderr": error}
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+        return {"returncode": 1, "stdout": "", "stderr": str(e)}
+    finally:
+        client.close()
+
+def get_source(default_work_lmt, pid):
+    pid_path = os.path.join(default_work_lmt, 'lmtoy_run', f'lmtoy_{pid}')
+    mk_runs_file = os.path.join(pid_path, 'mk_runs.py')
+    result = execute_mk_runs(pid)
+
+    # checks if the command ran successfully(return code 0)
+    if result["returncode"] == 0:
+        output = result["stdout"]
+        pattern = r"(\w+)\[\d+/\d+\] : ([\d,]+)"
+        matches = re.findall(pattern, output)
+        if not matches:
+            print("No sources found in output")
+            return {}
+
+        sources = {name: [int(x) for x in obsnums.split(',')] for name, obsnums in matches}
+        return sources
+    else:
+        print(f"Error in execution: {result['stderr']}")
+        return {}
+
+def get_email(pid):
+    email = config[pid]['email']
+    return email
+def get_instrument(pid):
+    instrument = config[pid]['instrument']
+    return instrument

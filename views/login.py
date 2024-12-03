@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 from my_server import app, User
 from flask_login import login_user
 from werkzeug.security import check_password_hash
-from functions import project_function as pf, pid_info
+from functions import project_function as pf
 from views.ui_elements import Storage
 from config_loader import load_config
 
@@ -76,11 +76,13 @@ def login_state(n_clicks, pid, password, is_open, data):
         user = User.query.filter_by(username=pid).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
+            if data is None:
+                data = {}
+
             data.update({
                 'pid': pid,
-                'source': pid_info.get_source(default_work_lmt, pid),
-                'email': pid_info.get_email(pid),
-                'instrument': pid_info.get_instrument(pid),
+                'source': pf.get_source(default_work_lmt, pid),
+                'email': config[pid]['email'],
             })
             return f'{prefix}project', '', False, data, ''
         else:

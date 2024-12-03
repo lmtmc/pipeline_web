@@ -218,7 +218,7 @@ def submit_job(n_clicks, selected_runfile):
 
     try:
         runfile = os.path.basename(selected_runfile)
-        result = pf.execute_remote_command(current_user.username, runfile)
+        result = pf.execute_remote_submit(current_user.username, runfile)
 
         # Step 2: Update UI with the result
         result_message = f"Job submitted successfully!\n{result}"
@@ -491,7 +491,7 @@ def update_selected_rows(n_clicks, selected_rows,
 
     # get the columns from the updated_row_data where the column has a value
     value_columns = {
-        key for row in updated_row_data for key, value in row.items() if value not in [None, '']
+        key for row in updated_row_data for key, value in row.items() if value not in [None, '','nan']
     }
     # Add any extra columns dynamically, keeping the order consistent with explicit_order
     all_columns = [col for col in explicit_order if col in value_columns] + [

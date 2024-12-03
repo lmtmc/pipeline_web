@@ -2,7 +2,7 @@ from dash import dcc, html, Input, Output, State
 from my_server import app
 from flask_login import logout_user, current_user
 from flask import session
-from views import login, project_layout, help, ui_elements as ui,rsr_layout, sequoia_layout
+from views import login, project_layout, help, ui_elements as ui
 import argparse
 from config_loader import load_config
 

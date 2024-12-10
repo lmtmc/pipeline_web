@@ -11,9 +11,8 @@ from flask_login import current_user
 import shutil
 from my_server import app
 from functions import project_function as pf
-from functions.project_function import get_session_list
 from views import ui_elements as ui
-from views.ui_elements import Session, Runfile
+from views.ui_elements import Session, Runfile, Table
 from config_loader import load_config
 
 try :
@@ -39,13 +38,17 @@ update_btn = [
 
 layout = html.Div(
     [
+        dcc.Interval(id='check-job-interval', interval=60 * 1000, n_intervals=0),
         dbc.Row([
             dbc.Col([
                 ui.session_layout,
                 html.Br(),
-                ui.submit_job_layout
-    ],width=2,),
+            ],width=2,),
             dbc.Col(ui.runfile_layout, width=10),
+        ], className='mb-3'),
+        dbc.Row([
+            dbc.Col(ui.submit_job_layout,),
+            dbc.Col(ui.job_status_layout,),
         ]),
         dcc.Location(id='edit-url', refresh=True),
      ]
@@ -69,14 +72,14 @@ def default_session(active_session, data_store):
 
     if active_session is None:
         # Hide all buttons if no session is selected
-        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, data_store
+        return HIDE_STYLE,HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, data_store
 
     if active_session == init_session:
         # Hide delete buttons and show only the new session button for the default session
-        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, SHOW_STYLE, data_store
+        return HIDE_STYLE,HIDE_STYLE, HIDE_STYLE, SHOW_STYLE, data_store
 
     # Default case: Show all buttons
-    return SHOW_STYLE, SHOW_STYLE, SHOW_STYLE, SHOW_STYLE, data_store
+    return SHOW_STYLE, SHOW_STYLE,SHOW_STYLE, SHOW_STYLE, data_store
 
 
 # update session list
@@ -116,7 +119,7 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
             return [], False, error_message, None, []
 
         modal_open, message = no_update, ''
-        session_list = get_session_list(init_session, pid_path)
+        session_list = pf.get_session_list(init_session, pid_path)
 
         if triggered_id == Session.NEW_BTN.value:
             modal_open = True
@@ -168,25 +171,69 @@ def display_confirmation(n_clicks, active_item):
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
 
+# if submit job is clicked, check if the job is completed every 60 seconds
+@app.callback(
+    Output('check-job-interval', 'interval'),
+    Input(Session.SUBMIT_JOB.value, 'children'),
+    prevent_initial_call=True
+)
+def check_job_status(n_clicks):
+    return 5 * 1000
 # If there is data in the folder, show the open result link
 @app.callback(
     Output('view-result-url', 'style'),
     Output('view-result-url', 'href'),
-    Input(Session.SESSION_LIST.value, 'active_item'),
+    Input('check-job-interval', 'n_intervals'),
+    State(Session.RUNFILE_SELECT.value, 'value'),
     prevent_initial_call=True
 )
-def show_job_status(active_session):
+def show_job_status(interval, selected_runfile):
+    print(f"Callback triggered with interval: {interval}")
 
-    if not active_session:
-        return no_update
-    session_path = pf.get_session_path(current_user.username, active_session)
-    status,run_btn_disabled, view_result_style,view_result_href = pf.check_job_status(session_path)
-    return view_result_style, view_result_href
+    # Construct the file paths
+    job_ids_file = f'{selected_runfile}.jobid'
+    print(f"Checking job IDs file: {job_ids_file}")
+
+    # Check if the job ID file exists
+    if not os.path.exists(job_ids_file):
+        print(f"Job ID file not found: {job_ids_file}")
+        return HIDE_STYLE, '#'
+
+    # Read job IDs from the job file
+    with open(job_ids_file, 'r') as f:
+        job_ids = f.read().splitlines()
+    print(f"Job IDs: {job_ids}")
+
+    # Check if the selected runfile exists
+    if not os.path.exists(selected_runfile):
+        print(f"Runfile not found: {selected_runfile}")
+        return HIDE_STYLE, '#'
+
+    # Read the runfile to get the length
+    with open(selected_runfile, 'r') as f:
+        runfile_length = len(f.readlines())
+    print(f"Runfile length: {runfile_length}")
+
+    # Check if the number of job IDs matches the runfile length
+    if len(job_ids) != runfile_length:
+        print(f"Job IDs count does not match runfile length. Returning hidden state.")
+        return HIDE_STYLE, '#'
+
+    # Check if jobs are finished
+    if pf.are_jobs_finished(job_ids):
+        print(f"Jobs are finished. Returning visible result link.")
+        return SHOW_STYLE, f'/view_result/{current_user.username}/{init_session}'
+
+    # If jobs are not finished, hide the result URL
+    print(f"Jobs are not finished. Returning hidden state.")
+    return HIDE_STYLE, '#'
+
+
 # open readme in a new tab when chick view result button
 
 # Flask route to serve the file, using session as part of the URL
 @app.server.route('/view_result/<username>/<session>')
-def serve_readme(username, session):
+def serve_readme(username,session):
     # Construct the file path using the session from the URL
     readme_path = os.path.join(pf.get_session_path(current_user.username, session), 'README.html')
     print(f'Serving README from: {readme_path}')
@@ -194,16 +241,17 @@ def serve_readme(username, session):
         return flask.send_file(readme_path)
     else:
         return 'Error: README.html not found', 404
-# if selected file is not empty, show the submit job button
+# if selected file is not empty and email input is a valid email format show the submit job button
 @app.callback(
-    Output(Runfile.RUN_BTN.value, 'style'),
+    Output(Runfile.RUN_BTN.value, 'disabled'),
     Input(Session.RUNFILE_SELECT.value, 'value'),
+    Input('email-input', 'value'),
     prevent_initial_call=True
 )
-def enable_run_button(selected_runfile):
-    if selected_runfile:
-        return SHOW_STYLE
-    return HIDE_STYLE
+def enable_run_button(selected_runfile, email):
+    if selected_runfile and email and pf.is_valid_email(email):
+        return False
+    return True
 
 # submit job
 @app.callback(
@@ -227,6 +275,78 @@ def submit_job(n_clicks, selected_runfile):
         error_message = html.Pre(f"Error: {e}")
         return error_message
 
+@app.callback(
+    Output("slurm-job-status-output", "children", allow_duplicate=True),
+    Input("check-status-btn", "n_clicks"),
+    State("user-id-input", "value"),
+    prevent_initial_call=True,
+)
+def update_job_status(n_clicks, user_id):
+    if not user_id:
+        return dbc.Alert("Please enter a valid User ID.", color="warning",dismissable=True)
+
+    status, success = pf.check_slurm_job_status(user_id)
+    if success:
+        # Display the parsed job status in a table
+        return html.Div([
+            html.H5(f"Current job status for {user_id}"),
+            dbc.Table(
+            [
+                html.Thead(
+                    html.Tr([html.Th(header) for header in status.keys()])
+                ),
+                html.Tbody(
+                    html.Tr([html.Td(value) for value in status.values()])
+                ),
+            ],
+            bordered=True,
+            hover=True,
+            responsive=True,
+            striped=True,
+        )])
+    else:
+        # Show an error or no jobs found message
+        return dbc.Alert(status, color="danger", dismissable=True)
+
+@app.callback(
+    Output("cancel-job-confirm-dialog", "displayed"),
+    Input("cancel-job-btn", "n_clicks"),
+    State("job-id-input", "value"),
+    prevent_initial_call=True,
+)
+def display_confirm_dialog(n_clicks, job_id):
+    if not job_id:
+        return False
+    return True
+
+@app.callback(
+    Output("slurm-job-status-output", "children"),
+    Input("cancel-job-confirm-dialog", "submit_n_clicks"),
+    State("job-id-input", "value"),
+    prevent_initial_call=True,
+)
+def cancel_job(n_clicks, job_id):
+    status, success = pf.cancel_slurm_job(job_id)
+    if success:
+        # Display the parsed job status in a table
+        return html.Div([
+            dbc.Alert(f"Job {job_id} has been successfully cancelled.", color="success", dismissable=True),
+            dbc.Table(
+        [
+                    html.Thead(html.Tr([html.Th(header) for header in status.keys()])),
+                    html.Tbody(html.Tr([html.Td(value) for value in status.values()])),
+                ],
+                bordered=True,
+                hover=True,
+                responsive=True,
+                striped=True,
+            ),
+            ],
+        )
+    else:
+        # Show an error or no jobs found message
+        return dbc.Alert(status, color="danger", dismissable=True)
+
 # display selected runfile
 @app.callback(
     [
@@ -247,6 +367,7 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     if not ctx.triggered:
         raise PreventUpdate
     current_runfile = next((value for value in selected_runfile if value), None)
+
     if not current_runfile:
         return '', HIDE_STYLE, '','',data_store
 
@@ -343,7 +464,7 @@ def runfile_del_display_confirmation(n_clicks, selected_runfile):
         return False, ''
 # If selected rows, show the edit button else hide it
 @app.callback(
-    Output(Runfile.EDIT_BTN.value, 'style'),
+    Output(Table.OPTION.value, 'style'),
     Input('runfile-table', 'selectedRows'),
     State(Session.SESSION_LIST.value, 'active_item'),
     prevent_initial_call=True
@@ -353,20 +474,108 @@ def show_edit_button(selected_rows, active_session):
         return SHOW_STYLE
     return HIDE_STYLE
 
+# if delete row button is clicked, show the confirmation alert
+@app.callback(
+    [
+        Output(Table.CONFIRM_DEL_ROW.value, 'displayed'),
+        Output(Table.CONFIRM_DEL_ROW.value, 'message')
+    ],
+    Input(Table.DEL_ROW_BTN.value, 'n_clicks'),
+    prevent_initial_call=True
+)
+def display_confirmation(n_clicks):
+    if n_clicks:
+        return True, 'Are you sure you want to delete the selected row(s)?'
+    return False, ''
+
+# if confirm delete is clicked, delete the selected rows
+@app.callback(
+    Output('runfile-table', 'rowData', allow_duplicate=True),  # Update the table with new data
+    Input(Table.CONFIRM_DEL_ROW.value, 'submit_n_clicks'),  # Confirm deletion
+    State('runfile-table', 'selectedRows'),  # Selected rows to delete
+    State('runfile-table', 'rowData'),  # Current table data
+    State('data-store', 'data'),  # Data context, e.g., file path
+    prevent_initial_call=True
+)
+def delete_row(confirm_clicks, selected_rows, row_data, data_store):
+    if confirm_clicks and selected_rows:
+        # Extract selected row indices
+        selected_ids = {row['index'] for row in selected_rows}
+        # Filter out selected rows
+        updated_data = [row for row in row_data if row['index'] not in selected_ids]
+
+        # Save updated data to file
+        if data_store and 'selected_runfile' in data_store:
+            file_path = data_store['selected_runfile']
+            df = pd.DataFrame(updated_data)
+            pf.save_runfile(df,file_path)
+            print(f"Updated data saved to {file_path}")
+
+        # Return updated data to the table
+        return updated_data
+
+    # If no rows were selected or no deletion, return the current data unchanged
+    return row_data
+# if add row button is clicked, add a new row to the table
+@app.callback(
+    Output('runfile-table', 'rowData', allow_duplicate=True),  # Update the table with cloned data
+    Input(Table.CLONE_ROW_BTN.value, 'n_clicks'),  # Clone button clicked
+    State('runfile-table', 'selectedRows'),  # Selected rows to clone
+    State('runfile-table', 'rowData'),  # Current table data
+    State('data-store', 'data'),  # Data context, e.g., file path
+    prevent_initial_call=True
+)
+def clone_row(n_clicks, selected_rows, row_data, data_store):
+    if n_clicks and selected_rows:
+        # Determine the maximum current index to create unique indices for cloned rows
+        max_index = max(row['index'] for row in row_data) if row_data else -1
+        new_rows = []
+
+        for i, row in enumerate(selected_rows):
+            # Create a clone of the selected row with a unique index
+            cloned_row = row.copy()
+            cloned_row['index'] = max_index + i + 1  # Assign new unique index
+            new_rows.append(cloned_row)
+
+        # Append cloned rows to the existing data
+        updated_data = row_data + new_rows
+
+        # Debugging logs
+        print(f"Selected rows to clone: {selected_rows}")
+        print(f"Cloned rows: {new_rows}")
+        print(f"Updated data after cloning: {updated_data}")
+
+        # Save updated data to file
+        if data_store and 'selected_runfile' in data_store:
+            file_path = data_store['selected_runfile']
+            df = pd.DataFrame(updated_data)
+            pf.save_runfile(df, file_path)
+            print(f"Updated data saved to {file_path}")
+
+        # Return updated data to the table
+        return updated_data
+
+    # If no rows were selected or no cloning, return the current data unchanged
+    return row_data
+
 # if selected rows, open the edit layout, if eidt-apply or edit-cancel is clicked, close the layout
 @app.callback(
     Output('parameter-edit-modal', 'is_open'),
     [
-        Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+        Input(Table.EDIT_BTN.value, 'n_clicks'),
         Input('edit-apply', 'n_clicks'),
         Input('edit-cancel', 'n_clicks')
     ],
+    State('data-store', 'data'),
     prevent_initial_call=True
 )
-def show_edit_layout(n1, n2, n3):
+def show_edit_layout(n1, n2, n3, data):
     triggered_id = ctx.triggered_id
-    if triggered_id == Runfile.EDIT_BTN.value:
-        return True
+    if triggered_id == Table.EDIT_BTN.value:
+        if data and data.get('source', {}):
+            return True
+        else:
+            return False
     elif triggered_id in ['edit-apply', 'edit-cancel']:
         return False
     return False
@@ -377,7 +586,7 @@ def show_edit_layout(n1, n2, n3):
         Output('_s-dropdown', 'options'),
         Output('_s-dropdown', 'value')
     ],
-    Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+    Input(Table.EDIT_BTN.value, 'n_clicks'),
     State('runfile-table', 'selectedRows'),
     State('data-store', 'data'),
 )
@@ -419,7 +628,7 @@ def update_obsnum_options(source, selected_rows, data):
         Output('other_sequoia-input', 'value'),
     ],
     [
-        Input(Runfile.EDIT_BTN.value, 'n_clicks'),
+        Input(Table.EDIT_BTN.value, 'n_clicks'),
     ],
     [
         State('runfile-table', 'selectedRows'),

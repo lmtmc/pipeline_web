@@ -81,8 +81,9 @@ def login_state(n_clicks, pid, password, is_open, data):
 
             data.update({
                 'pid': pid,
-                'source': pf.get_source(default_work_lmt, pid),
+                'source': pf.get_source(pid),
                 'email': config[pid]['email'],
+
             })
             return f'{prefix}project', '', False, data, ''
         else:

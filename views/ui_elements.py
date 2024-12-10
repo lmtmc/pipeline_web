@@ -28,13 +28,11 @@ class Session(Enum):
 
 
 class Runfile(Enum):
-    TABLE = 'runfile-table'
     CONTENT_TITLE = 'runfile-content-title'
     CONTENT = 'runfile-content'
     DEL_BTN = 'del-runfile'
     CLONE_BTN = 'clone-runfile'
     SAVE_BTN = 'runfile-save'
-    EDIT_BTN = 'runfile-edit'
     VALIDATION_ALERT = 'validation-message'
     CONFIRM_DEL_ALERT = 'confirm-del-runfile'
     SAVE_TABLE_BTN = 'save-table'
@@ -52,7 +50,7 @@ class Table(Enum):
     # Add Datatable related IDs here
     DEL_ROW_BTN = 'del-row'
     CLONE_ROW_BTN = 'clone-row'
-    EDIT_TABLE = 'edit-table'
+    EDIT_BTN = 'edit-table'
     CONFIRM_DEL_ROW = 'confirm-del-row'
     OPTION = 'table-option'
     ADD_ROW_BTN = 'add-new-row'
@@ -74,8 +72,9 @@ def create_navbar(is_authenticated, username):
 
     if is_authenticated:
         right_content.extend([
-            dbc.NavItem(dbc.NavLink(f'Current Project: {username}', href="#", style={'color': 'black'}),
+            dbc.NavItem(dbc.NavLink(f'Current Project: {username}', href="{prefix}project", style={'color': 'black'}),
                         className='me-3'),
+            # dbc.NavItem(dbc.NavLink('Job Status', href=f'{prefix}job_status', style={'color': 'black'}), className='me-3'),
             dbc.NavItem(dbc.NavLink('Logout', href=f'{prefix}logout', style={'color':'black'}), className='me-3'),
         ])
 
@@ -181,29 +180,7 @@ session_layout = html.Div(
     id='session-list-display',
     className='session-list-display'
 )
-submit_job_layout = html.Div(
-    [
-        dbc.Card(
-            [
-                dbc.CardHeader(id='submit-session-job-label',className='title-link',),
-                #todo select multi runfile
-                dbc.CardBody(dcc.Dropdown(id = Session.RUNFILE_SELECT.value, placeholder='Select Runfiles')),
-                dbc.CardFooter(dbc.Row(
-                    [
-                        dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, style={'display': 'none'})),
-                        dbc.Col(dcc.Link('Open Result',
-                                 href='',
-                                 id='view-result-url',
-                                 target='_blank',
-                                 style={'display': 'none', 'color': 'grey'}),)
 
-                    ], justify='end'),
-                ),
-            ],
-                # className='justify-content-between align-items-end',
-            ),
-        html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
-])
 def create_dropdown_parameter(col):
     return html.Div(
         [
@@ -270,16 +247,16 @@ runfile_layout = html.Div(
             dbc.CardHeader(
                 dbc.Row(
                     [
-                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value), className='text-center my-4',width='auto'),
+                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value),className='text-center my-2',width='auto'),
                         dbc.Col(
                             dbc.ButtonGroup([
-                                dbc.Button(html.I(className='fas fa-edit'), id=Runfile.EDIT_BTN.value, outline=True, className='btn-icon', color='secondary'),
                                 dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value,outline=True, className='btn-icon',color='secondary'),
                                 dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, className='btn-icon', color='secondary'),
-                            ],size='lg'
+                            ],
+                                #size='lg',
                             ),
-                            width='auto', className='d-flex align-items-center'),
-                    ], className='mb-3 align-items-center'
+                            width='auto', className='d-flex justify-content-center align-items-center'),
+                    ], className='align-items-center'
                 )
             ),
             dbc.CardBody(
@@ -300,241 +277,114 @@ runfile_layout = html.Div(
                                             }
                                         },
                             dashGridOptions={
-                                # "pagination": True,
                                 "rowSelection": "multiple",
                                 "rowMultiSelectWithClick": True,
                                 "suppressRowClickSelection": True,
-                                # "animateRows": True,
-                                # "enableCellTextSelection": True,
-                                # 'undoRedoCellEditing': True,
                                 'enableBrowserTooltips': True,
-                                # 'skipHeaderOnAutoSize': True,
                             },
-                            # columnSize='sizeToFit',
-                            # columnSizeOptions = {"skipHeader": True},
 
-                            style={
-                                "height": "500px",
-                                "width": "100%",
-                            },
                             className="ag-theme-alpine",
                         ),
                     ]),
+                html.Div(
+                    dbc.Row(
+                        [
+                            dbc.Col(dbc.Button('Edit Row', id=Table.EDIT_BTN.value,),width='auto'),
+                            dbc.Col(dbc.Button('Delete Row', id=Table.DEL_ROW_BTN.value,),width='auto'),
+                            dbc.Col(dbc.Button('Clone Row', id=Table.CLONE_ROW_BTN.value,),width='auto'),
+                        ],
+                        className='d-flex align-items-center mt-3',
+
+                    ),id=Table.OPTION.value,
+                        style={'display': 'none'}),
+                dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
                 parameter_layout_modal,
                 ],
             ),
             clone_runfile_modal,
             dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
-            dbc.Tooltip("Edit", target=Runfile.EDIT_BTN.value, placement='bottom'),
-            dbc.Tooltip("Delete", target=Runfile.DEL_BTN.value, placement='bottom'),
-            dbc.Tooltip("Clone", target=Runfile.CLONE_BTN.value, placement='bottom'),
+
+            dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom'),
+            dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom'),
         ]),
     id=Runfile.CONTENT_DISPLAY.value,
     className='runfile-content-container'
 )
 
-common_columns = ['_s', 'obsnum']
-instruments = {
-    'rsr': {
-        'columns': common_columns + ['xlines', 'badcb', 'jitter', 'badlags', 'shortlags', 'spike', 'linecheck', 'bandzoom', 'speczoom',
-                    'rthr', 'cthr', 'sgf', 'notch', 'blo','bandstats','admit','speczoom']
-    },
-    'sequoia': {
-        'columns': common_columns + ['bank', 'exclude_beams', 'time_range', 'b_regions', 'l_regions', 'slice', 'baseline_order',
-                    'dv', 'dw', 'birdie', 'rms_cut', 'stype', 'otf_cal', 'extent', 'resolution', 'cell', 'otf_select',
-                    'RMS', 'restart', 'admit', 'maskmoment', 'dataverse', 'cleanup', 'edge', 'speczoom', 'badcb', 'srdp']
-    }
-}
-custom_multiselect = {
-    'cellEditor': 'agPopupSelectCellEditor',
-    'cellEditorParams': {
-        'values': ['Option 1', 'Option 2', 'Option 3'],  # Your options here
-        'multiple': True
-    }
-}
-
-def create_table(instrument, columns):
-    # Define special configurations for specific columns
-    special_columns_editor = {
-        '_s': {
-            'cellEditor': 'agSelectCellEditor',
-            'cellEditorParams': {},
-        },
-        'obsnum': {'cellEditor': 'agSelectCellEditor','cellEditorParams': {}},
-        'bank': {'cellEditor': {'function': 'RadioSelector'}, 'cellEditorParams': {'values': [0, 1]}},
-        'px_list': {'cellEditor': {'function':'CheckboxSelector'}, 'cellEditorParams': {}},
-        'stype': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1', '2']},
-        },
-        'otf_cal': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1']},
-        },
-        'otf_select': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['jinc', 'gauss', 'triangle', 'box']},
-        },
-        'RMS': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1']},
-        },
-        'restart': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1']},
-        },
-        'admin': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1']},
-        },
-        'maskmoment': {
-            'cellEditor': {'function': 'RadioSelector'},
-            'cellEditorParams': {'values': ['0', '1']},
-        },
-
-    }
-    # Add an "index" column explicitly
-    columns.insert(0, "index")
-
-    column_defs = []
-
-    for col in columns:
-        # Default cell editor is agTextCellEditor
-        cell_editor = 'agTextCellEditor'
-        cell_editor_params = {}
-        tooltip = col
-        # Update cell editor based on special columns
-        if col in special_columns_editor:
-            cell_editor = special_columns_editor[col].get('cellEditor', 'agTextCellEditor')
-            cell_editor_params = special_columns_editor[col].get('cellEditorParams', {})
-
-        # Construct column definition
-        column_def = {
-            # "headerName": col,
-            "field": col,
-            "valueGetter": {"function": "params.node.rowIndex + 1"},
-            "resizable": True,
-            # "sortable": True,
-            "filter": True,
-            "editable": False,
-            # "valueGetter": f"params.data.{col}",
-            "cellEditorPopup": True,
-            "cellEditor": cell_editor,
-            "cellEditorParams": cell_editor_params,
-            "headerTooltip": tooltip
-        }
-
-        column_defs.append(column_def)
-
-    default_col_def = {
-        "flex": 1,
-        "minWidth": 100,
-        "filter": True,
-        "sortable": True,
-        "resizable": True,
-        "editable": True,
-        'checkboxSelection': {
-            'function':'params.column == params.columnApi.getAllDisplayedColumns()[0]',
-        },
-        'headerCheckboxSelection': {
-            'function':'params.column == params.columnApi.getAllDisplayedColumns()[0]',
-        },
-        # "floatingFilter": True,
-    }
-
-    return html.Div([
-        dcc.Store(id=f'{instrument}-table-data', data=[]),
-        html.Div(
-            dbc.ButtonGroup([
-                dbc.Button('Delete rows', id=f'{instrument}-del-row-btn', color='secondary', outline=True,
-                           className='mr-1'),
-                dbc.Button('Clone rows', id=f'{instrument}-clone-row-btn', color='secondary', outline=True,
-                           className='mr-1'),
-            ]),
-        ),
-        AgGrid(
-            id=f'{instrument}-table',
-            columnDefs=column_defs,
-            rowData=[],
-            dashGridOptions={
-                "pagination": True,
-                "rowSelection": "multiple",
-                "rowMultiSelectWithClick": True,
-                "suppressRowClickSelection": True,
-                "animateRows": True,
-                "enableCellTextSelection": True,
-                'undoRedoCellEditing': True,
-                'enableBrowserTooltips': True,
-                'skipHeaderOnAutoSize': True,
-            },
-            # columnSize='sizeToFit',
-            # columnSizeOptions = {"skipHeader": True},
-            getRowId="params.data.index",
-            style={
-                "height": "500px",
-                "width": "100%",
-            },
-        ),
-
-        html.Br(),
-        dbc.Row([
-            dbc.Col(
-                html.Div(dbc.Card(
+submit_job_layout = html.Div(
+    [
+        dbc.Card(
+            [
+                dbc.CardHeader(id='submit-session-job-label',className='title-link',),
+                #todo select multi runfile
+                dbc.CardBody(
                     [
-                        dbc.Label('Multi-Row-Edit', className='large-label'),
-                        dbc.Row(
-                            [
-                                dbc.Col(dcc.Dropdown(
-                                    id=f'{instrument}-edit-column',
-                                    placeholder='Select column to edit', className='mb-3'), width=4),
-                                dbc.Col(
-                                    html.Div(dcc.Input(id=f'{instrument}-edit-value', type='text', placeholder='Enter new value',
-                                               className='mb-3'),
-                                            id=f'{instrument}-edit-layout'), width='auto'
-                                ),
-
-                                dbc.Col(html.Button('Apply Edit', id=f'{instrument}-apply-edit-button', n_clicks=0),
-                                        width='auto'),
-                            ])],
-                    style={'width': '50%', 'padding': '10px'}), id=f'{instrument}-multi-edit-layout',
-                    style={'display': 'none'}),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label('Select Runfiles'),
+                                dcc.Dropdown(id = Session.RUNFILE_SELECT.value, placeholder='Select Runfiles'),
+                            ]),
+                            dbc.Col([
+                                dbc.Label('Input email address for notification'),
+                                dbc.Input(id='email-input', placeholder='Enter email address', type='email', className='mb-3'),
+                            ])]
+                        ),
+                        dcc.Link('Open Result',
+                                 href='',
+                                 id='view-result-url',
+                                 target='_blank',
+                                 style={'display': 'none', 'color': 'grey'}),
+                    ]),
+                dbc.CardFooter([
+                    dbc.Row(
+                    [
+                        dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True)),
+                    ],
+                        justify='end')
+                ],
+                ),
+            ],
+                # className='justify-content-between align-items-end',
             ),
-            dbc.Col(create_parameter_btns(instrument), width='auto'),
-        ]),
+        html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
+])
 
-        dcc.ConfirmDialog(id=f'{instrument}-confirm-del-row', message=''),
+job_status_layout = dbc.Card(
+    [
+        dbc.CardHeader("Job Status on Unity", className="title-link"),
+        dbc.CardBody(
+            [
+                dbc.Row(
+            [
+                dbc.Col(dbc.Label('Account Name'), width='auto'),
+                dbc.Col([
 
-        dbc.Alert(id=f'{instrument}-edit-output', is_open=False, dismissable=True),
-    ])
-
-fixed_states = [State(Runfile.TABLE.value, 'data')]
-# Define dynamic Output objects based on a list of field names
-field_names = instruments['rsr']['columns']
-dynamic_outputs = [Output(field, 'value', allow_duplicate=True) for field in field_names]
-dynamic_states = [State(field, 'value') for field in field_names]
-# Combine fixed and dynamic Output objects
-all_states = fixed_states + dynamic_states
-# Layout creation functions
-tooltip_target = ['obsunms_label', 'bank_label', 'b_order_label', 'extent_label']
-
-def create_parameter_header(instrument):
-    return html.Div(
-        [
-            html.H5(f'{instrument} Parameter Table', id='parameter-table-location', className='parameter-table-title'),
-        ],className='d-flex justify-content-between')
-
-def create_parameter_btns(instrument):
-    return html.Div(
-        dbc.Row([
-            dbc.Col(
-                dbc.Button("Save", id=f'{instrument}-save-btn', color='primary', className='mr-2'),
-                width="auto", className="ml-auto"
-            ),
-            dbc.Col(
-                dbc.Button("Back", id=f'{instrument}-cancel-btn', color='danger'),
-                width="auto"
-            ),
-        ], className='d-flex justify-content-end align-items-center mb-2 p-2')
-    )
+                    dbc.Input(id="user-id-input", placeholder="Enter USER ID", type="text", value="lmthelpdesk_umass_edu"),
+                ],width='auto',
+                ),
 
 
+                # dbc.Col(
+                #     dbc.Input(id="job-id-input", placeholder="Enter Job Id", type="text"),
+                #     width='auto',
+                # ),
+                # dbc.Col(
+                #     dbc.Button("Cancel Job", id="cancel-job-btn", color="secondary", ),
+                #     width='auto',
+                # ),
+            ],
+            className="mt-3 align-items-center",
+        ),
+
+        dcc.ConfirmDialog(
+            id='cancel-job-confirm-dialog',
+            message='Are you sure you want to cancel the job?',
+        ),
+        html.Div(id="slurm-job-status-output", className="mt-4"),
+    ]),
+        dbc.CardFooter(dbc.Col(
+                    dbc.Button("Check Status", id="check-status-btn", color="primary", ),
+                    width='auto',
+                ),)
+    ]
+)

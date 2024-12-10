@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+from datetime import time
 from functools import lru_cache
 import dash_bootstrap_components as dbc
 import paramiko
@@ -9,7 +10,8 @@ from flask_login import current_user
 from dash import no_update, html
 import pandas as pd
 from config_loader import load_config
-
+import smtplib
+from email.message import EmailMessage
 
 try :
     config = load_config()
@@ -25,7 +27,8 @@ hostname = config['ssh']['hostname']
 username = config['ssh']['username']
 
 # Define the commands
-set_user_command = 'export WORK_LMT_USER=pipeline_web'
+user = 'pipeline_web'
+set_user_command = f'export WORK_LMT_USER={user}'
 dispatch_command = './bin/lmtoy_dispatch.sh'
 mk_runs_command = './bin/lmtoy_mk_runs.sh'
 
@@ -298,81 +301,51 @@ def get_session_path(username, active_session):
         return default_session_prefix + username
     return os.path.join(default_work_lmt, username, active_session)
 
-def execute_remote_submit(pid, runfile):
+# Helper function to execute SSH commands
+def execute_ssh_command(command, set_user_command=None):
     # Set up SSH client
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    # Create the full command to run remotely in the background with nohup
-    full_command = f"{set_user_command} && nohup {dispatch_command} {pid} {runfile}"
-    print(f"Full Command: {full_command}")
     try:
         # Connect to the SSH server
         client.connect(hostname=hostname, username=username)
         print("SSH connection established.")
 
-        # Execute the command in the background
-        stdin, stdout, stderr = client.exec_command(full_command)
+        full_command = f"{set_user_command} && {command}" if set_user_command else command
+        print(f'Executing command: {full_command}')
 
-        # Get any initial output or error messages
+        # Execute the command
+        stdin, stdout, stderr = client.exec_command(command)
+
+        # Get any output or error messages
         output = stdout.read().decode()
         error = stderr.read().decode()
 
-        # Print output and error for debugging
-        print("Initial Output:", output)
-        print("Initial Error:", error)
+        return {'returncode': 0 if not error else 1, 'stdout': output, 'stderr': error}
 
-        # Inform that the command was sent successfully
-        print("Command sent to run in the background.")
-        return "Job started in background"
     except paramiko.AuthenticationException:
-        print("Authentication failed. Please check your credentials.")
+        return {"returncode": 1, "stdout": "", "stderr": "Authentication failed. Check credentials."}
     except paramiko.SSHException as sshException:
-        print(f"Unable to establish SSH connection: {sshException}")
+        return {"returncode": 1, "stdout": "", "stderr": f"SSH connection failed: {sshException}"}
     except Exception as e:
-        print(f"Exception occurred: {e}")
-    finally:
-        # Close the connection
-        print("Closing SSH connection.")
-        client.close()
-
-def execute_mk_runs(pid):
-    # Set up SSH client
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    # Create the full command to run remotely in the background with nohup
-    full_command = f"{set_user_command} && nohup {mk_runs_command} {pid}"
-    print(f"Full Command: {full_command}")
-    try:
-        # Connect to the SSH server
-        client.connect(hostname=hostname, username=username)
-        print("SSH connection established.")
-
-        # Execute the command in the background
-        stdin, stdout, stderr = client.exec_command(full_command)
-
-        # Get any initial output or error messages
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-
-        # Print output and error for debugging
-        print("Initial Output:", output)
-        print("Initial Error:", error)
-
-        # Inform that the command was sent successfully
-        print("Command sent to run in the background.")
-        return {"returncode": 0, "stdout": output, "stderr": error}
-    except Exception as e:
-        print(f"Exception occurred: {e}")
         return {"returncode": 1, "stdout": "", "stderr": str(e)}
     finally:
         client.close()
+        print("SSH connection closed.")
+def execute_remote_submit(pid, runfile):
+    # Create the full command to run remotely in the background with nohup
+    full_command = f"nohup {dispatch_command} {pid} {runfile}"
+    print(f"Full Command: {full_command}")
+    result = execute_ssh_command(full_command, set_user_command=set_user_command)
+    if result["returncode"] == 0:
+        return "Job submitted successfully."
+    else:
+        return f"Error in submission: {result['stderr']}"
 
-def get_source(default_work_lmt, pid):
-    pid_path = os.path.join(default_work_lmt, 'lmtoy_run', f'lmtoy_{pid}')
-    mk_runs_file = os.path.join(pid_path, 'mk_runs.py')
-    result = execute_mk_runs(pid)
+def get_source(pid):
+    full_command = f"nohup {mk_runs_command} {pid}"
+    result = execute_ssh_command(full_command, set_user_command=set_user_command)
 
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
@@ -389,9 +362,88 @@ def get_source(default_work_lmt, pid):
         print(f"Error in execution: {result['stderr']}")
         return {}
 
-def get_email(pid):
-    email = config[pid]['email']
-    return email
-def get_instrument(pid):
-    instrument = config[pid]['instrument']
-    return instrument
+def check_slurm_job_status(username):
+    command = f"squeue -u {username} -o '%i|%j|%t|%M|%D|%R'"
+    result = execute_ssh_command(command)
+
+    if result["returncode"] == 0:
+        output = result["stdout"]
+        if not output.strip():
+            return "No jobs found", False
+
+        lines = output.splitlines()
+        if len(lines) <= 1:  # If there are no job lines after the header
+            return "No jobs found", False
+
+        headers = ["Job ID", "Name", "State", "Time Used", "Nodes", "Reason"]
+        data = lines[1:]  # Skip the header row
+
+        try:
+            # Parse the first job's details
+            job_details = data[0].split("|")
+            return {header: value for header, value in zip(headers, job_details)}, True
+        except IndexError:
+            return "Error: Malformed data received from SLURM", False
+    else:
+        return f"Error: {result['stderr']}", False
+
+def cancel_slurm_job(job_id):
+    command = f"scancel {job_id}"
+    result = execute_ssh_command(command)
+    if result["returncode"] == 0:
+        return {"Job ID": "", "Name":job_id, "State": "CANCELLED", "Time Used": "", "Nodes": "", "Reason": ""}, True
+    else:
+        return f"Error: {result['stderr']}", False
+
+def are_jobs_finished(job_ids):
+    command = f"squeue -j {','.join(job_ids)} -o '%i|%t'"
+    result = execute_ssh_command(command)
+    if result["returncode"] == 0:
+        output = result["stdout"].strip()
+        lines = output.splitlines()[1:]  # Skip the header line
+        for line in lines:
+            job_id, status = line.split("|")
+            if status not in ["CD", "CG"]:  # CD: Completed, CG: Completing
+                return False
+        return True
+    else:
+        print(f"Error checking job status: {result['stderr']}")
+        return False
+
+def monitor_slurm_jobs(job_ids, check_interval=30):
+    while True:
+        if are_jobs_finished(job_ids):
+            return True
+        time.sleep(check_interval)
+
+def send_email(subject, body, to):
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg['Subject'] = subject
+    msg['to'] = to
+
+    user = 'xiahuang@umass.edu'
+    password = 'youn pktv vqyy mqfe'
+    msg['from'] = user
+
+    # Use SMTP_SSL instead of SMTP
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    server.login(user, password)
+    server.send_message(msg)
+    server.quit()
+def notify_user(job_ids, recipient_email, method="email",):
+    if method == "email":
+        send_email("Jobs Completed", f"All jobs {job_ids} have completed.",recipient_email)
+    elif method == "app":
+        return f"Notification: All jobs {job_ids} have completed."
+    else:
+        print(f"All jobs {job_ids} have completed.")
+# send email to user if the job is finished
+def send_email_alert(job_ids, recipient_email):
+    notify_user(job_ids, recipient_email, method="email")
+    return f"Email sent to {recipient_email}."
+
+def is_valid_email(email):
+    """Validate the email format using a regex."""
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return bool(re.match(email_regex, email))

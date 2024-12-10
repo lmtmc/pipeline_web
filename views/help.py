@@ -1,46 +1,60 @@
-import dash
 from dash import dcc, html
 
 markdown_content = '''
-#
+## Help Document 
 
-### Help Document 
+### **Login**
+- Use your Project ID (PID) and password to log in.
+    - **Example**: PID = 2021-S1-US-3 | Password = 1234
+- If the password for the PID is invalid, an error message will be displayed.
 
-###### **Login**
-Use the Project Id (PID) to login. 
-- Example: 'PID = '2021-S1-US-3' | Password = '1234''
-- If the password for the PID is not valid, an error message will be displayed.
-###### **Session Management**
-Default session (`session-0`) and previous sessions will be displayed.
-- If `session-0` is selected, you can clone it:
-    1. Click `CLONE SESSION`.
-    2. Input a number for the new session name.
-- If other session is selected, you can clone or delete it.
+---
 
-###### **Runfile Management**
-- After selecting a session, available runfiles in this session will be displayed.
-- Choose a runfile to view its content.
-- The left corner shows the session and runfile name.
-- The right corner provides `RUNFILE OPTIONS` to verify, edit, delete or clone the selected runfile.
-    - Click `VERIFY` to verify the runfile content.
-    - Click `DELETE` to delete the runfile.
-    - Click `EDIT` to edit the runfile.
-    - Click `CLONE` to clone the runfile.
+### **Session Management**
+- The default session (SESSION-0) and any previously created sessions will be displayed.
+- If SESSION-0 is selected, you can clone it:
+    1. Click CLONE SESSION.
+    2. Enter a number for the new session name.
+- If a session other than SESSION-0 is selected, you can:
+    1. Clone the session.
+    2. Delete the session.
+
+---
+
+### **Runfile Management**
+- After selecting a session, all available runfiles within that session will be displayed.
+- Select a runfile to view its content in the table.
+- The runfile name is shown in the top-left corner of the table.
+- If the runfile is not part of SESSION-0, you can:
+    1. **Clone the runfile**: Create a duplicate of the runfile.
+    2. **Delete the runfile**: Remove the runfile from the session.
+
+---
     
-###### **Table Management** 
-- After selecting a runfile and clicking `EDIT`, the runfile content will be displayed in 
-a table. 
-- Click `TOGGLE COLUMNS` to view less or more columns. 
-- Filter rows by typing in the filter cell (the row below the column name).Click `ENTER` to apply the filter. Click `SAVE FILTERED ROWS` to save the data to a new 
-runfile. 
-- If there's no row selected, the `TABLE OPTIONS` dropdown menu will only has a `ADD A NEW ROW` option. 
-- If you click the `ADD A NEW ROW` option, you can input parameters for the new row and click `SAVE` to add the new row. 
-- Select a row or multiply rows and the `TABLE OPTIONS` dropdown menu will appear. - Click `EDIT ROWS`, 
-the edit parameters layout will be displayed. Modify parameters and click `SAVE` to save the changes to the selected 
-rows. 
-- Click `DELETE ROW` to delete the selected row(s). - Click `CLONE ROW` to clone the selected row(s) and append 
-to the end of the table.'''
+### **Table Management**
+- For runfiles not in SESSION-0, after selecting a row, you can:
+    1. Click CLONE ROW to duplicate rows.
+    2. Click DELETE ROW to remove rows.
+    3. Click EDIT ROW to modify rows (must share the same source).
+
+---
+
+### **Submit Job**
+- After selecting a runfile and providing a valid email address for notifications, the SUBMIT JOB button will be enabled.
+- Click SUBMIT JOB to send the job to UNITY.
+- Upon successful submission:
+    - A notification will be sent to your email (to be implemented).
+    - You can log out or continue submitting additional jobs.
+- Once the job is finished:
+    - You will receive another notification with links to view the results (to be implemented).
+
+---
+
+### **Job Status**
+- Check the status of a submitted job using the job ID, username, or job name (to be implemented).
+
+'''
 
 layout = html.Div(dcc.Markdown(markdown_content),
                   style={'margin-top': '50px', 'margin-left': '100px', 'margin-right': 'auto', 'margin-bottom': '100px',
-                         'text-align': 'left'})
+                         'text-align': 'left', 'font-size':'20px'})

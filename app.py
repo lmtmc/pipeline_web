@@ -2,7 +2,7 @@ from dash import dcc, html, Input, Output, State
 from my_server import app
 from flask_login import logout_user, current_user
 from flask import session
-from views import login, project_layout, help, ui_elements as ui
+from views import login, project_layout, job_status, help, ui_elements as ui
 import argparse
 from config_loader import load_config
 
@@ -71,10 +71,8 @@ def update_page(pathname,data):
         content = login.layout
     elif route == 'project' and is_authenticated:
         content = project_layout.layout
-    elif route == 'rsr-edit' and is_authenticated and instrument == 'rsr':
-        content = rsr_layout.layout
-    elif route == 'sequoia-edit' and is_authenticated and instrument == 'sequoia':
-        content = sequoia_layout.layout
+    # elif route == 'job_status' and is_authenticated:
+    #     content = job_status.layout
     elif route == 'help':
         content = help.layout
     elif route == 'logout':

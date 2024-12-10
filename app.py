@@ -2,7 +2,7 @@ from dash import dcc, html, Input, Output, State
 from my_server import app
 from flask_login import logout_user, current_user
 from flask import session
-from views import login, project_layout, job_status, help, ui_elements as ui
+from views import login, project_layout, help, ui_elements as ui
 import argparse
 from config_loader import load_config
 
@@ -21,7 +21,6 @@ DATA_STORE_INIT = {
     'runfile': None,
     'source': {},
     'selected_row': None,
-    'instrument': None,
     'selected_runfile': None,
     'selected_session': None
 }
@@ -60,7 +59,6 @@ def update_page(pathname,data):
     is_authenticated = current_user.is_authenticated
     username = current_user.username if is_authenticated else None
     navbar = ui.create_navbar(is_authenticated, username)
-    instrument = data.get('instrument')
 
     if not pathname.startswith(PREFIX):
         return navbar, html.Div('404 - Page not found'), data
@@ -71,8 +69,6 @@ def update_page(pathname,data):
         content = login.layout
     elif route == 'project' and is_authenticated:
         content = project_layout.layout
-    # elif route == 'job_status' and is_authenticated:
-    #     content = job_status.layout
     elif route == 'help':
         content = help.layout
     elif route == 'logout':

@@ -198,7 +198,6 @@ def df_runfile(filename):
 
 # save revised data to a runfile
 def save_runfile(df, runfile_path):
-    print(f"runfile_path: {runfile_path}")
     separator = '='
     lines = []
 
@@ -340,7 +339,6 @@ def execute_ssh_command(command, set_user_command=None):
 def execute_remote_submit(pid, runfile):
     # Create the full command to run remotely in the background with nohup
     full_command = f"{dispatch_command} {pid} {runfile}"
-    print(f"Full Command: {full_command}")
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
     if result["returncode"] == 0:
         return "Job submitted successfully."
@@ -350,7 +348,6 @@ def execute_remote_submit(pid, runfile):
 def get_source(pid):
     full_command = f"{mk_runs_command} {pid}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
-    print('getting source', result)
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
         output = result["stdout"]
@@ -366,8 +363,13 @@ def get_source(pid):
         print(f"Error in execution: {result['stderr']}")
         return {}
 
-def check_slurm_job_status(username):
-    command = f"squeue -u {username} -o '%i|%j|%t|%M|%D|%R'"
+def check_slurm_job_status(check_option,username):
+    if check_option == 'Account':
+        command = f"squeue -u {username} -o '%i|%j|%t|%M|%D|%R'"
+    elif check_option == 'Job ID':
+        command = f"squeue -j {username} -o '%i|%j|%t|%M|%D|%R'"
+    elif check_option == 'Job Name':
+        command = f"squeue -n {username} -o '%i|%j|%t|%M|%D|%R'"
     result = execute_ssh_command(command)
 
     if result["returncode"] == 0:
@@ -383,9 +385,12 @@ def check_slurm_job_status(username):
         data = lines[1:]  # Skip the header row
 
         try:
-            # Parse the first job's details
-            job_details = data[0].split("|")
-            return {header: value for header, value in zip(headers, job_details)}, True
+            # Parse all job details into a list of dictionaries
+            jobs = [
+                {header: value for header, value in zip(headers, line.split("|"))}
+                for line in data
+            ]
+            return jobs, True
         except IndexError:
             return "Error: Malformed data received from SLURM", False
     else:

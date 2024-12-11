@@ -258,9 +258,10 @@ def enable_run_button(selected_runfile, email):
     Output(Session.SUBMIT_JOB.value, 'children'),
     Input(Runfile.RUN_BTN.value, 'n_clicks'),
     State(Session.RUNFILE_SELECT.value, 'value'),
+    State('email-input', 'value'),
     prevent_initial_call=True
 )
-def submit_job(n_clicks, selected_runfile):
+def submit_job(n_clicks, selected_runfile, email):
     if not selected_runfile:
         return html.Pre('No runfile selected.')
 
@@ -269,44 +270,69 @@ def submit_job(n_clicks, selected_runfile):
         result = pf.execute_remote_submit(current_user.username, runfile)
 
         # Step 2: Update UI with the result
-        result_message = f"Job submitted successfully!\n{result}"
+        if result["returncode"] == 0:
+            result_message = f"Job submitted successfully for {runfile}!\n{result}"
+            pf.send_email('Job submitted successfully', result_message, email)
+
+        else:
+            result_message = f"Error in submission: {result['stderr']}"
         return result_message
     except Exception as e:
         error_message = html.Pre(f"Error: {e}")
         return error_message
 
+
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),
     Input("check-status-btn", "n_clicks"),
+    State('job-status-option', 'value'),
     State("user-id-input", "value"),
     prevent_initial_call=True,
 )
-def update_job_status(n_clicks, user_id):
+def update_job_status(n_clicks, check_option,user_id):
     if not user_id:
-        return dbc.Alert("Please enter a valid User ID.", color="warning",dismissable=True)
+        return dbc.Alert("Please enter a valid User ID.", color="warning", dismissable=True)
 
-    status, success = pf.check_slurm_job_status(user_id)
+    status, success = pf.check_slurm_job_status(check_option,user_id)
+
     if success:
-        # Display the parsed job status in a table
-        return html.Div([
-            html.H5(f"Current job status for {user_id}"),
-            dbc.Table(
-            [
-                html.Thead(
-                    html.Tr([html.Th(header) for header in status.keys()])
+        # If jobs are found, display them in a table
+        if isinstance(status, list) and status:
+            headers = status[0].keys()
+            rows = [
+                html.Tr([html.Td(job[header]) for header in headers])
+                for job in status
+            ]
+
+            return html.Div([
+                html.H5(f"Current job status for {user_id}"),
+                dbc.Table(
+                    [
+                        html.Thead(html.Tr([html.Th(header) for header in headers])),
+                        html.Tbody(rows),
+                    ],
+                    bordered=True,
+                    hover=True,
+                    responsive=True,
+                    striped=True,
                 ),
-                html.Tbody(
-                    html.Tr([html.Td(value) for value in status.values()])
-                ),
-            ],
-            bordered=True,
-            hover=True,
-            responsive=True,
-            striped=True,
-        )])
+            ])
+        else:
+            # No jobs found case
+            return dbc.Alert("No jobs found.", color="info", dismissable=True)
     else:
-        # Show an error or no jobs found message
+        # Show an error if the status retrieval failed
         return dbc.Alert(status, color="danger", dismissable=True)
+# if account is selected, show the default value
+@app.callback(
+    Output("user-id-input", "value"),
+    Input("job-status-option", "value"),
+    prevent_initial_call=True,
+)
+def update_user_id_input(option):
+    if option == "Account":
+        return "lmthelpdesk_umass_edu"
+    return ''
 
 @app.callback(
     Output("cancel-job-confirm-dialog", "displayed"),
@@ -540,11 +566,6 @@ def clone_row(n_clicks, selected_rows, row_data, data_store):
         # Append cloned rows to the existing data
         updated_data = row_data + new_rows
 
-        # Debugging logs
-        print(f"Selected rows to clone: {selected_rows}")
-        print(f"Cloned rows: {new_rows}")
-        print(f"Updated data after cloning: {updated_data}")
-
         # Save updated data to file
         if data_store and 'selected_runfile' in data_store:
             file_path = data_store['selected_runfile']
@@ -572,8 +593,6 @@ def clone_row(n_clicks, selected_rows, row_data, data_store):
 def show_edit_layout(n1, n2, n3, data):
     triggered_id = ctx.triggered_id
     if triggered_id == Table.EDIT_BTN.value:
-        print(f"Edit button clicked: {triggered_id}")
-        print(f"Data: {data}")
         if data and data.get('source', {}):
             return True
         else:

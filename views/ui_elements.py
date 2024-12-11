@@ -356,11 +356,18 @@ job_status_layout = dbc.Card(
             [
                 dbc.Row(
             [
-                dbc.Col(dbc.Label('Account Name'), width='auto'),
+                dbc.Col(dbc.Label('Select an option'), width='auto'),
+                dbc.Col(dcc.Dropdown(id='job-status-option',
+                                         options=['Account', 'Job ID', 'Job Name'],value='Account',
+                                         ), width=2),
                 dbc.Col([
 
-                    dbc.Input(id="user-id-input", placeholder="Enter USER ID", type="text", value="lmthelpdesk_umass_edu"),
+                    dbc.Input(id="user-id-input", type="text"),
                 ],width='auto',
+                ),
+                dbc.Col(
+                    dbc.Button("Check Status", id="check-status-btn", color="primary", ),
+                    width='auto',
                 ),
 
 
@@ -382,9 +389,5 @@ job_status_layout = dbc.Card(
         ),
         html.Div(id="slurm-job-status-output", className="mt-4"),
     ]),
-        dbc.CardFooter(dbc.Col(
-                    dbc.Button("Check Status", id="check-status-btn", color="primary", ),
-                    width='auto',
-                ),)
     ]
 )

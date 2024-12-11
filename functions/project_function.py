@@ -28,7 +28,7 @@ username = config['ssh']['username']
 
 # Define the commands
 user = 'pipeline_web'
-set_user_command = f'export WORK_LMT_USER={user}'
+set_user_command = f'WORK_LMT_USER={user}'
 dispatch_command = './bin/lmtoy_dispatch.sh'
 mk_runs_command = './bin/lmtoy_mk_runs.sh'
 
@@ -312,11 +312,15 @@ def execute_ssh_command(command, set_user_command=None):
         client.connect(hostname=hostname, username=username)
         print("SSH connection established.")
 
-        full_command = f"{set_user_command} && {command}" if set_user_command else command
-        print(f'Executing command: {full_command}')
+        # Combine environment variable setup with the actual command
+        if set_user_command:
+            full_command = f"{set_user_command} && {command}"
+        else:
+            full_command = command
+        print(f"Executing command: {full_command}")
 
         # Execute the command
-        stdin, stdout, stderr = client.exec_command(command)
+        stdin, stdout, stderr = client.exec_command(full_command)
 
         # Get any output or error messages
         output = stdout.read().decode()
@@ -335,7 +339,7 @@ def execute_ssh_command(command, set_user_command=None):
         print("SSH connection closed.")
 def execute_remote_submit(pid, runfile):
     # Create the full command to run remotely in the background with nohup
-    full_command = f"nohup {dispatch_command} {pid} {runfile}"
+    full_command = f"{dispatch_command} {pid} {runfile}"
     print(f"Full Command: {full_command}")
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
     if result["returncode"] == 0:
@@ -344,9 +348,9 @@ def execute_remote_submit(pid, runfile):
         return f"Error in submission: {result['stderr']}"
 
 def get_source(pid):
-    full_command = f"nohup {mk_runs_command} {pid}"
+    full_command = f"{mk_runs_command} {pid}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
-
+    print('getting source', result)
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
         output = result["stdout"]

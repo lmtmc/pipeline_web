@@ -572,6 +572,8 @@ def clone_row(n_clicks, selected_rows, row_data, data_store):
 def show_edit_layout(n1, n2, n3, data):
     triggered_id = ctx.triggered_id
     if triggered_id == Table.EDIT_BTN.value:
+        print(f"Edit button clicked: {triggered_id}")
+        print(f"Data: {data}")
         if data and data.get('source', {}):
             return True
         else:

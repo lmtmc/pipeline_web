@@ -314,7 +314,7 @@ def execute_ssh_command(command, set_user_command=None):
 
         # Combine environment variable setup with the actual command
         if set_user_command:
-            full_command = f"{set_user_command} && {command}"
+            full_command = f"{set_user_command} {command}"
         else:
             full_command = command
         print(f"Executing command: {full_command}")

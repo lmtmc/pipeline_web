@@ -38,7 +38,7 @@ update_btn = [
 
 layout = html.Div(
     [
-        dcc.Interval(id='check-job-interval', interval=60 * 1000, n_intervals=0),
+        # dcc.Interval(id='check-job-interval', interval=60 * 1000, n_intervals=0),
         dbc.Row([
             dbc.Col([
                 ui.session_layout,
@@ -172,61 +172,61 @@ def display_confirmation(n_clicks, active_item):
     return False, ''
 
 # if submit job is clicked, check if the job is completed every 60 seconds
-@app.callback(
-    Output('check-job-interval', 'interval'),
-    Input(Session.SUBMIT_JOB.value, 'children'),
-    prevent_initial_call=True
-)
-def check_job_status(n_clicks):
-    return 5 * 1000
+# @app.callback(
+#     Output('check-job-interval', 'interval'),
+#     Input(Session.SUBMIT_JOB.value, 'children'),
+#     prevent_initial_call=True
+# )
+# def check_job_status(n_clicks):
+#     return 5 * 1000
 # If there is data in the folder, show the open result link
-@app.callback(
-    Output('view-result-url', 'style'),
-    Output('view-result-url', 'href'),
-    Input('check-job-interval', 'n_intervals'),
-    State(Session.RUNFILE_SELECT.value, 'value'),
-    prevent_initial_call=True
-)
-def show_job_status(interval, selected_runfile):
-    print(f"Callback triggered with interval: {interval}")
-
-    # Construct the file paths
-    job_ids_file = f'{selected_runfile}.jobid'
-    print(f"Checking job IDs file: {job_ids_file}")
-
-    # Check if the job ID file exists
-    if not os.path.exists(job_ids_file):
-        print(f"Job ID file not found: {job_ids_file}")
-        return HIDE_STYLE, '#'
-
-    # Read job IDs from the job file
-    with open(job_ids_file, 'r') as f:
-        job_ids = f.read().splitlines()
-    print(f"Job IDs: {job_ids}")
-
-    # Check if the selected runfile exists
-    if not os.path.exists(selected_runfile):
-        print(f"Runfile not found: {selected_runfile}")
-        return HIDE_STYLE, '#'
-
-    # Read the runfile to get the length
-    with open(selected_runfile, 'r') as f:
-        runfile_length = len(f.readlines())
-    print(f"Runfile length: {runfile_length}")
-
-    # Check if the number of job IDs matches the runfile length
-    if len(job_ids) != runfile_length:
-        print(f"Job IDs count does not match runfile length. Returning hidden state.")
-        return HIDE_STYLE, '#'
-
-    # Check if jobs are finished
-    if pf.are_jobs_finished(job_ids):
-        print(f"Jobs are finished. Returning visible result link.")
-        return SHOW_STYLE, f'/view_result/{current_user.username}/{init_session}'
-
-    # If jobs are not finished, hide the result URL
-    print(f"Jobs are not finished. Returning hidden state.")
-    return HIDE_STYLE, '#'
+# @app.callback(
+#     Output('view-result-url', 'style'),
+#     Output('view-result-url', 'href'),
+#     Input('check-job-interval', 'n_intervals'),
+#     State(Session.RUNFILE_SELECT.value, 'value'),
+#     prevent_initial_call=True
+# )
+# def show_job_status(interval, selected_runfile):
+#     print(f"Callback triggered with interval: {interval}")
+#
+#     # Construct the file paths
+#     job_ids_file = f'{selected_runfile}.jobid'
+#     print(f"Checking job IDs file: {job_ids_file}")
+#
+#     # Check if the job ID file exists
+#     if not os.path.exists(job_ids_file):
+#         print(f"Job ID file not found: {job_ids_file}")
+#         return HIDE_STYLE, '#'
+#
+#     # Read job IDs from the job file
+#     with open(job_ids_file, 'r') as f:
+#         job_ids = f.read().splitlines()
+#     print(f"Job IDs: {job_ids}")
+#
+#     # Check if the selected runfile exists
+#     if not os.path.exists(selected_runfile):
+#         print(f"Runfile not found: {selected_runfile}")
+#         return HIDE_STYLE, '#'
+#
+#     # Read the runfile to get the length
+#     with open(selected_runfile, 'r') as f:
+#         runfile_length = len(f.readlines())
+#     print(f"Runfile length: {runfile_length}")
+#
+#     # Check if the number of job IDs matches the runfile length
+#     if len(job_ids) != runfile_length:
+#         print(f"Job IDs count does not match runfile length. Returning hidden state.")
+#         return HIDE_STYLE, '#'
+#
+#     # Check if jobs are finished
+#     if pf.are_jobs_finished(job_ids):
+#         print(f"Jobs are finished. Returning visible result link.")
+#         return SHOW_STYLE, f'/view_result/{current_user.username}/{init_session}'
+#
+#     # If jobs are not finished, hide the result URL
+#     print(f"Jobs are not finished. Returning hidden state.")
+#     return HIDE_STYLE, '#'
 
 
 # open readme in a new tab when chick view result button

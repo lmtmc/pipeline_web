@@ -56,5 +56,7 @@ markdown_content = '''
 '''
 
 layout = html.Div(dcc.Markdown(markdown_content),
-                  style={'margin-top': '50px', 'margin-left': '100px', 'margin-right': 'auto', 'margin-bottom': '100px',
-                         'text-align': 'left', 'font-size':'20px'})
+                  style={'width': '80%',
+                         #'margin-top': '50px', 'margin-left': '100px', 'margin-right': 'auto', 'margin-bottom': '100px',
+                         'margin': 'auto',
+                         'text-align': 'left', 'font-size':'16px'})

@@ -200,7 +200,6 @@ def df_runfile(filename):
 def save_runfile(df, runfile_path):
     separator = '='
     lines = []
-
     # Iterate over DataFrame rows using iterrows, which doesn't include the index
     for _, row in df.iterrows():
         line = 'SLpipeline.sh'
@@ -220,8 +219,13 @@ def save_runfile(df, runfile_path):
                     print(f"px_list: {value}")
                 line += f" {column}{separator}{value}"
         lines.append(line)
+        # Extract filename from the given path
+    dir_path = os.path.dirname(runfile_path)
+    filename = os.path.basename(runfile_path)
 
-    with open(runfile_path, 'w') as f:
+    # Ensure the file is saved with the correct name
+    final_path = os.path.join(dir_path, filename)
+    with open(final_path, 'w') as f:
         f.write('\n'.join(lines))
 
 
@@ -324,7 +328,8 @@ def execute_ssh_command(command, set_user_command=None):
         # Get any output or error messages
         output = stdout.read().decode()
         error = stderr.read().decode()
-
+        print(f"Output: {output}")
+        print(f"Error: {error}")
         return {'returncode': 0 if not error else 1, 'stdout': output, 'stderr': error}
 
     except paramiko.AuthenticationException:

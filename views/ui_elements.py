@@ -181,25 +181,32 @@ session_layout = html.Div(
     className='session-list-display'
 )
 
-def create_dropdown_parameter(col):
+def create_dropdown_parameter(col,multi=False,options=None,**kwargs):
     return html.Div(
         [
             dbc.Label(f'{col}:'),
-            dcc.Dropdown(id=f'{col}-dropdown', placeholder=f'Select {col}', className='mb-3'),
+            dcc.Dropdown(id=f'{col}-dropdown', placeholder=f'Select {col}', className='mb-3',multi=multi,),
         ]
     )
 def create_radio_parameter(col, options):
     return html.Div(
         [
             dbc.Label(f'{col}:'),
-            dcc.RadioItems(id=f'{col}-radio', options=options,className='mb-3', inline=True),
+            dcc.RadioItems(id=f'{col}-radio', options=options,className='mb-3', inputStyle={"margin-right": "10px"}),
         ]
     )
 def create_input_parameter(col):
     return html.Div(
         [
             dbc.Label(f'{col}:'),
-            dcc.Input(id=f'{col}-input', type='text', placeholder=f'Enter {col}', className='mb-3'),
+            dcc.Input(id=f'{col}-input', type='text', className='mb-3'),
+        ]
+    )
+def create_textarea_parameter(col):
+    return html.Div(
+        [
+            dbc.Label(f'{col}:'),
+            dcc.Textarea(id=f'{col}-textarea', placeholder=f'Enter {col}', className='mb-3'),
         ]
     )
 def create_checkbox_parameter(col):
@@ -210,35 +217,103 @@ def create_checkbox_parameter(col):
         ]
     )
 
-parameter_layout = html.Div(
+# Helper function to dynamically create parameter components
+def create_parameter_component(param_name, param_type, **kwargs):
+    if param_type == 'dropdown':
+        return dbc.Col(create_dropdown_parameter(param_name, **kwargs), width=kwargs.get('width', 'auto'))
+    elif param_type == 'input':
+        return dbc.Col(create_input_parameter(param_name), width=kwargs.get('width', 'auto'))
+    elif param_type == 'radio':
+        return dbc.Col(create_radio_parameter(param_name, kwargs.get('options', [])), width=kwargs.get('width', 'auto'))
+
+# Configuration for each parameter
+rsr_parameter_configs = [
+    {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
+    {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
+    {'name': 'xlines', 'type': 'input'},
+    {'name': 'badcb', 'type': 'input'},
+    {'name': 'jitter', 'type': 'input'},
+    {'name': 'badlags', 'type': 'input'},
+    {'name': 'shortlags2', 'type': 'input'},
+    {'name': 'spike', 'type': 'input'},
+    {'name': 'linecheck', 'type': 'input'},
+    {'name': 'bandzoom', 'type': 'input'},
+    {'name': 'rthr', 'type': 'input'},
+    {'name': 'cthr', 'type': 'input'},
+    {'name': 'sgf', 'type': 'input'},
+    {'name': 'notch', 'type': 'input'},
+    {'name': 'blo', 'type': 'input'},
+    {'name': 'bandstats', 'type': 'input'},
+    {'name': 'srdp', 'type': 'input'},
+    {'name': 'admit', 'type': 'radio', 'options': ['0', '1']},
+    {'name': 'restart', 'type': 'input'},
+    {'name': 'speczoom', 'type': 'input'},
+]
+
+# Build layout dynamically
+rsr_parameter_layout_single_row = html.Div(
     [
         dbc.Row(
             [
-                dbc.Col(create_dropdown_parameter('obsnum'),width=2),
-                dbc.Col(create_dropdown_parameter('_s'),width=2),
-                dbc.Col(create_input_parameter('badcb'),width='auto'),
-                dbc.Col(create_input_parameter('srdp'),width='auto'),
-                dbc.Col(create_radio_parameter('admit',['0','1']),width='auto'),
-                dbc.Col(create_input_parameter('speczoom'),width='auto'),
-                dbc.Col(create_input_parameter('other_rsr'),width='auto'),
-                dbc.Col(create_input_parameter('other_sequoia'),width='auto'),
-            ],           # className='d-flex justify-content-between'
+                create_parameter_component(
+                    config['name'], config['type'],
+                    multi=config.get('multi'),
+                    options=config.get('options'),
+                    width=config.get('width')
+                )
+                for config in rsr_parameter_configs
+            ]
         ),
-    ],id='parameter-layout')
-
-parameter_layout_modal = dbc.Modal(
-    [
-        dbc.ModalHeader('Edit Parameters'),
-        dbc.ModalBody(
-            html.Div([
-                parameter_layout,
-              ],id='layouts'),),
-        dbc.ModalFooter(
-                dbc.Row([
+        dbc.Row([
                     dbc.Col(dbc.Button('Apply', id='edit-apply', color='primary', className='mt-3'), width='auto'),
                     dbc.Col(dbc.Button('Cancel', id='edit-cancel', color='danger', className='mt-3'), width='auto'),
-                    ])
-        )
+                    ], className='d-flex justify-content-end')
+    ], id='parameter-layout'
+)
+sequoia_parameter_layout_single_row = html.Div()
+rsr_parameter_layout_multi_row = html.Div(dbc.Row([
+    dbc.Col(dbc.Label('Select a Parameter'),width='auto'),
+    dbc.Col(dbc.Select(id='multi-edit-dropdown',
+                       options=[{'label': config['name'], 'value': config['name']}
+                                for config in rsr_parameter_configs if config['name'] not in ['obsnum', '_s']],
+                       ),width='auto'),
+    dbc.Col(dbc.Label('New Value'),width='auto'),
+    dbc.Col(dcc.Input(id='multi-edit-input', type='text'),width='auto'),
+    dbc.Col(dbc.Button('Apply', id='rsr-multi-edit-apply', color='primary'),width='auto'),
+    dbc.Col(dbc.Button('Cancel', id='rsr-multi-edit-cancel', color='danger'),width='auto'),
+]),className='d-flex align-items-center',id='multi-rsr-parameter')
+sequoia_parameter_layout_multi_row = html.Div()
+def create_instrument_parameter_layout(instrument, row_length):
+    if row_length == 1:
+        if instrument == 'rsr':
+            return rsr_parameter_layout_single_row
+        elif instrument == 'sequoia':
+            return sequoia_parameter_layout_single_row
+        else:
+            return None
+    elif row_length > 1:
+        if instrument == 'rsr':
+            return rsr_parameter_layout_multi_row
+        elif instrument == 'sequoia':
+            return sequoia_parameter_layout_multi_row
+        else:
+            return None
+    else:
+        return None
+
+def create_parameter_layout_modal(instrument,row_length):
+
+    return dbc.Modal(
+    [
+        dbc.ModalHeader(dbc.Row([
+            dbc.Col(html.H5('Edit Parameters'),width='auto'),
+            dbc.Col(dbc.Button('Parameter Info', id='para-help-btn', color='secondary'))],className='d-flex align-items-center'),
+        ),
+        dbc.ModalBody(
+            html.Div([
+                create_instrument_parameter_layout(instrument, row_length),
+                dbc.Offcanvas(id='parameter-help-offcanvas', is_open=False, children=[]),
+              ],id='layouts'),),
     ],id='parameter-edit-modal', size='xl', centered=True, scrollable=True,backdrop='static')
 
 runfile_layout = html.Div(
@@ -298,7 +373,7 @@ runfile_layout = html.Div(
                     ),id=Table.OPTION.value,
                         style={'display': 'none'}),
                 dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
-                parameter_layout_modal,
+
                 ],
             ),
             clone_runfile_modal,
@@ -362,7 +437,7 @@ job_status_layout = dbc.Card(
                                          ), width=2),
                 dbc.Col([
 
-                    dbc.Input(id="user-id-input", type="text"),
+                    dbc.Input(id="user-id-input", type="text",value='lmthelpdesk_umass_edu', placeholder="Enter", ),
                 ],width='auto',
                 ),
                 dbc.Col(
@@ -391,3 +466,28 @@ job_status_layout = dbc.Card(
     ]),
     ]
 )
+
+def create_parameter_help_canvas(instrument):
+    if instrument == 'rsr':
+        return html.P([
+            html.H5("PI Parameters:"),
+            html.Ul([
+                html.Li("xlines: Set to a comma-separated list of freq, dfreq pairs where strong lines are to avoid baseline fitting."),
+                html.Li("badcb: Set to a comma-separated list of (chassis/board) combinations, e.g., badcb=2/3,3/5. See also 'jitter'."),
+                html.Li("jitter: Jittering Tsys and BadLags. Use badcb's based on jitter. Default is 1."),
+                html.Li("badlags: Set to a badlags file if to use this instead of dynamically generated. Use 0 to force not to use it (not used yet)."),
+                html.Li("shortlags: Set to a short_min and short_hi to avoid flagged strong continuum source lags, e.g., shortlags=32,10.0."),
+                html.Li("spike: Spikiness of bad lags that need to be flagged. Default is 3."),
+                html.Li("linecheck: Set to 1 to use the source name to grab the correct xlines. Default is 0."),
+                html.Li("bandzoom: The band for the zoomed window (0..5). Default is 5."),
+                html.Li("speczoom: Override bandzoom with a manual speczoom=CENTER,HALF_WIDTH pair."),
+                html.Li("rthr: Threshold sigma value when averaging single observation repeats (-r option for rsr_driver). Default is 0.01."),
+                html.Li("cthr: Threshold sigma value when coadding all observations (-t option for rsr_driver and rsr_sum). Default is 0.01."),
+                html.Li("sgf: Savitzky-Golay high pass filter; odd number > 21. Default is 0."),
+                html.Li("notch: Sigma cut for notch filter to eliminate large frequency oscillations. Needs sgf > 21. Default is 0."),
+                html.Li("blo: Order of polynomial baseline subtraction. Default is 1."),
+                html.Li("bandstats: Also compute stats of each of the 6 RSR bands. Default is 0."),
+            ])
+        ])
+    else:
+        return html.P("No help available for the selected instrument.")

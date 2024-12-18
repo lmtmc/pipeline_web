@@ -328,8 +328,8 @@ def execute_ssh_command(command, set_user_command=None):
         # Get any output or error messages
         output = stdout.read().decode()
         error = stderr.read().decode()
-        print(f"Output: {output}")
-        print(f"Error: {error}")
+        # print(f"Output: {output}")
+        # print(f"Error: {error}")
         return {'returncode': 0 if not error else 1, 'stdout': output, 'stderr': error}
 
     except paramiko.AuthenticationException:
@@ -353,6 +353,7 @@ def execute_remote_submit(pid, runfile):
 def get_source(pid):
     full_command = f"{mk_runs_command} {pid}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
+    print(f"Result: {result}")
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
         output = result["stdout"]

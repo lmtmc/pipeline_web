@@ -16,6 +16,7 @@ except Exception as e:
 # Constants
 PREFIX = config['path']['prefix']
 DEFAULT_WORK_LMT = config['path']['work_lmt']
+# todo add another layer of data_store for different pid
 DATA_STORE_INIT = {
     'pid': None,
     'runfile': None,

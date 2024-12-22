@@ -83,6 +83,7 @@ def login_state(n_clicks, pid, password, is_open, data):
                 'pid': pid,
                 'source': pf.get_source(pid),
             })
+            print(f'Logged in as {pid}', 'data:', data)
             return f'{prefix}project', '', False, data, ''
         else:
             return f'{prefix}login', 'Invalid password', True, data, ''

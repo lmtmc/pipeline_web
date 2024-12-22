@@ -6,6 +6,7 @@ from datetime import time
 from functools import lru_cache
 import dash_bootstrap_components as dbc
 import paramiko
+from dash.exceptions import PreventUpdate
 from flask_login import current_user
 from dash import no_update, html
 import pandas as pd
@@ -357,7 +358,7 @@ def get_source(pid):
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
         output = result["stdout"]
-        pattern = r"(\w+)\[\d+/\d+\] : ([\d,]+)"
+        pattern = r"([\w\-]+)\[\d+/\d+\] : ([\d,]+)"
         matches = re.findall(pattern, output)
         if not matches:
             print("No sources found in output")
@@ -462,3 +463,45 @@ def is_valid_email(email):
     """Validate the email format using a regex."""
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     return bool(re.match(email_regex, email))
+
+def get_source_and_obsnum_options(n, selected_rows, data):
+    """Helper function to handle both source and obsnum dropdown options."""
+    # Add logic to inspect how rsr and seq data are processed
+    # Example:
+    if 'RSR' in selected_rows[0]['_io']:
+        print("Processing rsr data")
+    if 'SEQ' in selected_rows[0]['_io']:
+        print("Processing seq data")
+    if not n:
+        raise PreventUpdate
+
+    # Populate source options and value
+    source_options = [{'label': str(s), 'value': str(s)} for s in data.get('source', {}).keys()]
+    selected_row_data = selected_rows[0] if selected_rows else {}
+    source_value = selected_row_data.get('_s', None)
+
+    return source_options, source_value
+
+def get_obsnum_options(source, selected_rows, data):
+    """Helper function to handle obsnum dropdown options."""
+    if not source:
+        raise PreventUpdate
+    # get the obsnum options from data_store based on the source value
+
+    obsnum_options = data.get('source', {}).get(source)
+    obsnum_dropdown_options = [{'label': str(o), 'value': str(o)} for o in obsnum_options]
+
+    # extract the obsnum value from selected rows
+    selected_obsnums = []
+    if selected_rows:
+        for row in selected_rows:
+            obsnum = row.get('obsnum')
+            if obsnum:
+                selected_obsnums.append(obsnum)
+
+    # Flatten list if it contains multiple obsnum lists
+    selected_obsnums = [str(item) for sublist in selected_obsnums for item in
+                        (sublist if isinstance(sublist, list) else [sublist])]
+    # Disable dropdowns if at least one row is selected
+    disable_dropdowns = len(selected_rows) > 1
+    return obsnum_dropdown_options, selected_obsnums, disable_dropdowns, disable_dropdowns

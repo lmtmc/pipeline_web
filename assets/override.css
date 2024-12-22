@@ -554,13 +554,23 @@ display : block !important;
 }
 
 /* assets/style.css */
-#multi-edit-dropdown {
+#rsr-multi-edit-dropdown {
     /*font-family: 'Arial', sans-serif; !* Set the font for the dropdown *!*/
     font-size: 14px;                 /* Set the font size for the dropdown */
 }
 
-#multi-edit-dropdown option {
+#rsr-multi-edit-dropdown option {
     /*font-family: 'Courier New', monospace; !* Customize font for the options *!*/
     font-size: 16px;                      /* Customize font size for the options */
+    color: #333;                          /* Customize text color */
+}
+#seq-multi-edit-dropdown {
+    /*font-family: 'Arial', sans-serif; !* Set the font for the dropdown *!*/
+    font-size: 18px;                 /* Set the font size for the dropdown */
+}
+
+#seq-multi-edit-dropdown option {
+    /*font-family: 'Courier New', monospace; !* Customize font for the options *!*/
+    font-size: 20px;                      /* Customize font size for the options */
     color: #333;                          /* Customize text color */
 }

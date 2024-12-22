@@ -172,66 +172,6 @@ def display_confirmation(n_clicks, active_item):
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
 
-# if submit job is clicked, check if the job is completed every 60 seconds
-# @app.callback(
-#     Output('check-job-interval', 'interval'),
-#     Input(Session.SUBMIT_JOB.value, 'children'),
-#     prevent_initial_call=True
-# )
-# def check_job_status(n_clicks):
-#     return 5 * 1000
-# If there is data in the folder, show the open result link
-# @app.callback(
-#     Output('view-result-url', 'style'),
-#     Output('view-result-url', 'href'),
-#     Input('check-job-interval', 'n_intervals'),
-#     State(Session.RUNFILE_SELECT.value, 'value'),
-#     prevent_initial_call=True
-# )
-# def show_job_status(interval, selected_runfile):
-#     print(f"Callback triggered with interval: {interval}")
-#
-#     # Construct the file paths
-#     job_ids_file = f'{selected_runfile}.jobid'
-#     print(f"Checking job IDs file: {job_ids_file}")
-#
-#     # Check if the job ID file exists
-#     if not os.path.exists(job_ids_file):
-#         print(f"Job ID file not found: {job_ids_file}")
-#         return HIDE_STYLE, '#'
-#
-#     # Read job IDs from the job file
-#     with open(job_ids_file, 'r') as f:
-#         job_ids = f.read().splitlines()
-#     print(f"Job IDs: {job_ids}")
-#
-#     # Check if the selected runfile exists
-#     if not os.path.exists(selected_runfile):
-#         print(f"Runfile not found: {selected_runfile}")
-#         return HIDE_STYLE, '#'
-#
-#     # Read the runfile to get the length
-#     with open(selected_runfile, 'r') as f:
-#         runfile_length = len(f.readlines())
-#     print(f"Runfile length: {runfile_length}")
-#
-#     # Check if the number of job IDs matches the runfile length
-#     if len(job_ids) != runfile_length:
-#         print(f"Job IDs count does not match runfile length. Returning hidden state.")
-#         return HIDE_STYLE, '#'
-#
-#     # Check if jobs are finished
-#     if pf.are_jobs_finished(job_ids):
-#         print(f"Jobs are finished. Returning visible result link.")
-#         return SHOW_STYLE, f'/view_result/{current_user.username}/{init_session}'
-#
-#     # If jobs are not finished, hide the result URL
-#     print(f"Jobs are not finished. Returning hidden state.")
-#     return HIDE_STYLE, '#'
-
-
-# open readme in a new tab when chick view result button
-
 # Flask route to serve the file, using session as part of the URL
 @app.server.route('/view_result/<username>/<session>')
 def serve_readme(username,session):
@@ -401,10 +341,11 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
 
     runfile_title = pf.get_runfile_title(current_runfile, init_session)
     runfile_data,runfile_content = pf.df_runfile(current_runfile)
+
     row_data = runfile_data.to_dict('records')
     column_defs = [
         {
-            'headerName': c,
+            'headerName': 'instrument' if c == '_io' else 'source' if c == '_s' else c,
             'field': c,
             'filter': True,
             'sortable': True,
@@ -580,16 +521,24 @@ def clone_row(n_clicks, selected_rows, row_data, data_store):
 
     # If no rows were selected or no cloning, return the current data unchanged
     return row_data
-# todo can't select rows with different instrument
 
-# todo choose the parameter layout based on the instrument
+# choose the parameter layout based on the instrument
+instruments = ['rsr', 'seq']
 @app.callback(
     Output('parameter-edit-selector', 'children'),
     Input('runfile-table', 'selectedRows'),
     prevent_initial_call=True
 )
 def show_edit_layout(selected_rows):
-    layout = ui.create_parameter_layout_modal('rsr',len(selected_rows))
+    if not selected_rows or not isinstance(selected_rows, list) or not selected_rows[0]:
+        raise PreventUpdate
+    instrument = selected_rows[0].get('_io', '').upper()
+    if 'RSR' in instrument:
+        layout = ui.create_parameter_layout_modal(instruments[0],len(selected_rows),ui.rsr_parameter_configs)
+    elif 'SEQ' in instrument:
+        layout = ui.create_parameter_layout_modal(instruments[1],len(selected_rows),ui.sequoia_parameter_configs)
+    else:
+        layout = html.Div('Invaid instrument', className='alert alert-danger')
     return layout
 
 # if selected rows, and the edit button is clicked, show the parameter edit modal
@@ -607,87 +556,125 @@ def show_edit_layout(n, selected_rows):
 # if the parameter-edit-layout is open and edit-appy or edit-cancel is clicked, close the modal
 @app.callback(
     Output('parameter-edit-modal', 'is_open', allow_duplicate=True),
-    Input('edit-apply', 'n_clicks'),
-    Input('edit-cancel', 'n_clicks'),
+    Input('rsr-single-edit-apply', 'n_clicks'),
+    Input('rsr-single-edit-cancel', 'n_clicks'),
     prevent_initial_call=True
 )
-def close_edit_layout(n1, n2):
+def close_edit_layout(n1,n2):
     return False
 
-# if the parameter-edit-layout is open, multi-edit or multi-cancel is clicked, close the modal
+@app.callback(
+    Output('parameter-edit-modal', 'is_open', allow_duplicate=True),
+    Input('seq-single-edit-apply', 'n_clicks'),
+    Input('seq-single-edit-cancel', 'n_clicks'),
+    prevent_initial_call=True
+)
+def close_edit_layout(n1,n2):
+    return False
+
 @app.callback(
     Output('parameter-edit-modal', 'is_open', allow_duplicate=True),
     Input('rsr-multi-edit-apply', 'n_clicks'),
     Input('rsr-multi-edit-cancel', 'n_clicks'),
     prevent_initial_call=True
 )
-def close_multi_edit_layout(n1, n2):
+def close_edit_layout(n1,n2):
+    return False
+
+@app.callback(
+    Output('parameter-edit-modal', 'is_open', allow_duplicate=True),
+    Input('seq-multi-edit-apply', 'n_clicks'),
+    Input('seq-multi-edit-cancel', 'n_clicks'),
+    prevent_initial_call=True
+)
+def close_edit_layout(n1,n2):
     return False
 
 # if the parameter-edit-layout is open, populate the source option from datastore
 @app.callback(
     [
-        Output('_s-dropdown', 'options'),
-        Output('_s-dropdown', 'value')
+        Output('rsr-_s-dropdown', 'options'),
+        Output('rsr-_s-dropdown', 'value')
     ],
     Input(Table.EDIT_BTN.value, 'n_clicks'),
-    State('runfile-table', 'selectedRows'),
-    State('data-store', 'data'),
+    [
+        State('runfile-table', 'selectedRows'),
+        State('data-store', 'data')
+    ],
+    prevent_initial_call=True
 )
-def source_option(n, selected_rows, data):
-    if not n:
-        raise PreventUpdate
-    options = [{'label': str(s), 'value': str(s)} for s in data.get('source', {}).keys()]
-    selected_row_data = selected_rows[0] if selected_rows else {}
-    source = selected_row_data.get('_s', None)
-    return options, source
+def rsr_source_option(n, selected_rows, data):
+    return pf.get_source_and_obsnum_options(n, selected_rows, data)
 
-# update the obsnum options based on the source value in the cell
 @app.callback(
     [
-        Output('obsnum-dropdown', 'options'),
-        Output('obsnum-dropdown', 'value'),
-        Output('obsnum-dropdown', 'disabled'),
-        Output('_s-dropdown', 'disabled')
+        Output('seq-_s-dropdown', 'options'),
+        Output('seq-_s-dropdown', 'value')
     ],
-    Input('_s-dropdown', 'value'),
+    Input(Table.EDIT_BTN.value, 'n_clicks'),
+    [
+        State('runfile-table', 'selectedRows'),
+        State('data-store', 'data')
+    ],
+    prevent_initial_call=True
+)
+def seq_source_option(n, selected_rows, data):
+    return pf.get_source_and_obsnum_options(n, selected_rows, data)
+#
+# update the obsnum options based on the source value in the cell for rsr
+@app.callback(
+    [
+        Output('rsr-obsnum-dropdown', 'options'),
+        Output('rsr-obsnum-dropdown', 'value'),
+        Output('rsr-obsnum-dropdown', 'disabled'),
+        Output('rsr-_s-dropdown', 'disabled')
+    ],
+    Input('rsr-_s-dropdown', 'value'),
     State('runfile-table', 'selectedRows'),
     State('data-store', 'data'),
     prevent_initial_call=True
 )
 def update_obsnum_options(source, selected_rows, data):
-    if not source:
-        raise PreventUpdate
-    # get the obsnum options from data_store based on the source value
+    return pf.get_obsnum_options(source, selected_rows, data)
 
-    obsnum_options = data.get('source', {}).get(source)
-    obsnum_dropdown_options = [{'label': str(o), 'value': str(o)} for o in obsnum_options]
-
-    # extract the obsnum value from selected rows
-    selected_obsnums = []
-    if selected_rows:
-        for row in selected_rows:
-            obsnum = row.get('obsnum')
-            if obsnum:
-                selected_obsnums.append(obsnum)
-
-    # Flatten list if it contains multiple obsnum lists
-    selected_obsnums = [str(item) for sublist in selected_obsnums for item in
-                        (sublist if isinstance(sublist, list) else [sublist])]
-    # Disable dropdowns if at least one row is selected
-    disable_dropdowns = len(selected_rows) > 1
-    return obsnum_dropdown_options, selected_obsnums,disable_dropdowns, disable_dropdowns
+# update the obsnum options based on the source value in the cell for seq
+@app.callback(
+    [
+        Output('seq-obsnum-dropdown', 'options'),
+        Output('seq-obsnum-dropdown', 'value'),
+        Output('seq-obsnum-dropdown', 'disabled'),
+        Output('seq-_s-dropdown', 'disabled')
+    ],
+    Input('seq-_s-dropdown', 'value'),
+    State('runfile-table', 'selectedRows'),
+    State('data-store', 'data'),
+    prevent_initial_call=True
+)
+def update_obsnum_options(source, selected_rows, data):
+    return pf.get_obsnum_options(source, selected_rows, data)
 
 #  update all the parameters based on the selected row
-rsr_cols = [config['name'] for config in ui.rsr_parameter_configs]
-outputs = [
-    Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['obsnum', '_s']
-    else Output(f'{col}-radio', 'value') if col == 'admit'
+rsr_cols = ui.rsr_cols
+seq_cols = ui.seq_cols
+
+rsr_outputs = [
+    Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['rsr-obsnum', 'rsr-_s']
+    #else Output(f'{col}-label', 'children') if col == 'rsr-_io'
+    else Output(f'{col}-radio', 'value') if col == 'rsr-admit'
     else Output(f'{col}-input', 'value')
     for col in rsr_cols
 ]
+
+seq_outputs = [
+    Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['seq-obsnum', 'seq-_s']
+    #else Output(f'{col}-label', 'children') if col == 'seq-_io'
+    else Output(f'{col}-radio', 'value') if col == 'seq_admit'
+    else Output(f'{col}-input', 'value')
+    for col in seq_cols
+]
+# display values for all parameters based on the selected row for rsr
 @app.callback(
-    outputs,
+    rsr_outputs,
     [
         Input(Table.EDIT_BTN.value, 'n_clicks'),
     ],
@@ -698,34 +685,145 @@ outputs = [
 def show_edit_layout(n1, selected_rows):
     if not selected_rows:
         return no_update
-    selected_row_data = selected_rows[0] if selected_rows else {}
+    selected_row_data = selected_rows[0]
+    instrument = selected_row_data.get('_io', '').split('/')[0].upper()
+    # Determin parameter list based on instrument
+    if 'RSR' not in instrument:
+        raise PreventUpdate
     # Dynamically extract values for all rsr_cols
-    values = [selected_row_data.get(col, None) for col in rsr_cols]
+    cols = [col.split('-')[1] for col in rsr_cols]
+    values = [selected_row_data.get(col, None) for col in cols]
     # Return the values in the correct order
     return values
-# Update the selected row with all parameters
+
+# display values for all parameters based on the selected row for seq
 @app.callback(
-    Output('runfile-table', 'columnDefs'),
-    Output('runfile-table', 'rowData'),
-    Input('edit-apply', 'n_clicks'),
+    seq_outputs,
+    [
+        Input(Table.EDIT_BTN.value, 'n_clicks'),
+    ],
+    [
+        State('runfile-table', 'selectedRows'),
+    ],
+)
+def show_edit_layout(n1, selected_rows):
+    if not selected_rows:
+        return no_update
+    selected_row_data = selected_rows[0]
+    instrument = selected_row_data.get('_io', '').split('/')[0].upper()
+    # Determin parameter list based on instrument
+    if 'SEQ' not in instrument:
+        raise PreventUpdate
+    # Dynamically extract values for all rsr_cols
+    cols = [col.split('-')[1] for col in seq_cols]
+    values = [selected_row_data.get(col, None) for col in cols]
+    # Return the values in the correct order
+    return values
+
+#Update the selected row with all parameters for rsr layout
+@app.callback(
+    Output('runfile-table', 'columnDefs', allow_duplicate=True),
+    Output('runfile-table', 'rowData', allow_duplicate=True),
+    Input('rsr-single-edit-apply', 'n_clicks'),
     State('runfile-table', 'selectedRows'),
     State('runfile-table', 'rowData'),
     State('data-store', 'data'),
-    *[State(f'{col}-dropdown', 'value') if col in ['obsnum', '_s']
-      else State(f'{col}-radio', 'value') if col == 'admit'
+    *[State(f'{col}-dropdown', 'value') if col in ['rsr-obsnum', 'rsr-_s']
+      #else State(f'{col}-label', 'value') if col == 'rsr-_io'
+      else State(f'{col}-radio', 'value') if col == 'rsr-admit'
       else State(f'{col}-input', 'value')
       for col in rsr_cols],
     prevent_initial_call=True
 )
-def update_selected_rows(n_clicks, selected_rows, row_data, data_store, *args):
+def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *args):
     if not n_clicks or not selected_rows:
         raise PreventUpdate
 
-    selected_index = selected_rows[0]['index']
-    updated_values = dict(zip(rsr_cols, args))
+    selected_row = selected_rows[0]
+    selected_index = selected_row.get('index')
+    if selected_index is None:
+        raise PreventUpdate
+    # Map input values to columns
+    # remove rsr to match the table column names
+    cols = [col.split('-')[1] for col in rsr_cols]
+    print('cols',cols)
+    print('args',args)
+    updated_values = dict(zip(cols, args))
+    print('updated_values',updated_values)
     updated_values['index'] = selected_index
-
+    # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])
+    print('updated_values_df',updated_values_df)
+    # Create a DataFrame from the existing data
+    row_data_df = pd.DataFrame(row_data)
+    print('row_data_df',row_data_df)
+    # Align columns between existing data and updated values
+    row_data_df = row_data_df.reindex(columns=row_data_df.columns.union(updated_values_df.columns, sort=False), fill_value=None)
+    updated_values_df = updated_values_df.reindex(columns=row_data_df.columns, fill_value=None)
+
+    # Update the specific row with new values
+    row_data_df.loc[selected_index] = updated_values_df.iloc[0]
+
+    # Normalize data: convert empty strings and NaN to None
+    row_data_df = row_data_df.where(pd.notna(row_data_df), None)
+
+    # Identify columns with at least one non-None value
+    valid_columns = row_data_df.apply(lambda col: col.notna() & (col != ''), axis=0).any()
+    columns_with_values = row_data_df.columns[valid_columns].tolist()
+    print('columns_with_values',columns_with_values)
+
+    row_data_df = row_data_df[columns_with_values]
+
+    # Generate column definitions
+    column_defs = [
+        {
+            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
+            'field': col,
+            'filter': True,
+            'sortable': True,
+            'headerTooltip': f'{col} column',
+        }
+        for col in columns_with_values
+    ]
+
+    # Save the updated runfile if applicable
+    runfile = data_store.get('selected_runfile')
+    if runfile:
+        pf.save_runfile(row_data_df, runfile)
+
+    return column_defs, row_data_df.to_dict('records')
+#
+# #Update the selected row with all parameters for seq layout
+@app.callback(
+    Output('runfile-table', 'columnDefs', allow_duplicate=True),
+    Output('runfile-table', 'rowData',allow_duplicate=True),
+    Input('seq-single-edit-apply', 'n_clicks'),
+    State('runfile-table', 'selectedRows'),
+    State('runfile-table', 'rowData'),
+    State('data-store', 'data'),
+    *[State(f'{col}-dropdown', 'value') if col in ['seq-obsnum', 'seq-_s']
+      #else State(f'{col}-label', 'value') if col == 'seq-_io'
+      else State(f'{col}-radio', 'value') if col == 'seq-admit'
+      else State(f'{col}-input', 'value')
+      for col in seq_cols],
+    prevent_initial_call=True
+)
+def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *args):
+    if not n_clicks or not selected_rows:
+        raise PreventUpdate
+
+    selected_row = selected_rows[0]
+    selected_index = selected_row.get('index')
+    if selected_index is None:
+        raise PreventUpdate
+    # Map input values to columns
+    # remove rsr to match the table column names
+    cols = [col.split('-')[1] for col in seq_cols]
+    updated_values = dict(zip(cols, args))
+    updated_values['index'] = selected_index
+    # Create a DataFrame from the updated values
+    updated_values_df = pd.DataFrame([updated_values])
+    # Create a DataFrame from the existing data
     row_data_df = pd.DataFrame(row_data)
 
     # Align columns between existing data and updated values
@@ -747,7 +845,7 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, *args):
     # Generate column definitions
     column_defs = [
         {
-            'headerName': col,
+            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
             'field': col,
             'filter': True,
             'sortable': True,
@@ -763,16 +861,17 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, *args):
 
     return column_defs, row_data_df.to_dict('records')
 
+
 # in the multi-edit layout, if the apply button is clicked, update the column with the new value for all selected rows
 @app.callback(
     Output('runfile-table', 'columnDefs',allow_duplicate=True),
     Output('runfile-table', 'rowData',allow_duplicate=True),
-    Input('rsr-multi-edit-apply', 'n_clicks'),
+    Input('seq-multi-edit-apply', 'n_clicks'),
     State('runfile-table', 'selectedRows'),
     State('runfile-table', 'rowData'),
     State('data-store', 'data'),
-    State('multi-edit-dropdown', 'value'),
-    State('multi-edit-input', 'value'),
+    State('seq-multi-edit-dropdown', 'value'),
+    State('seq-multi-edit-input', 'value'),
     prevent_initial_call=True
 )
 def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, new_value):
@@ -780,7 +879,7 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
         raise PreventUpdate
 
     # create a dataframe from the rowData
-    row_data_df = pd.DataFrame(row_data)
+    row_data_df = pd.DataFrame(row_data).copy()
 
     # Update all selected rows with the new value for the specified column
     selected_indices = [row['index'] for row in selected_rows]
@@ -796,10 +895,11 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
     valid_columns = row_data_df.apply(lambda col: col.notna() & (col != ''), axis=0).any()
     columns_with_values = row_data_df.columns[valid_columns].tolist()
     row_data_df = row_data_df[columns_with_values]
+
     # Generate column definitions
     column_defs = [
         {
-            'headerName': col,
+            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
             'field': col,
             'filter': True,
             'sortable': True,
@@ -811,17 +911,90 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
     runfile = data_store.get('selected_runfile')
     if runfile:
         pf.save_runfile(row_data_df, runfile)
-    return column_defs, row_data
+    return column_defs, row_data_df.to_dict('records')
 
-# if click the parameter info button, show the parameter help canvas
 @app.callback(
-    Output('parameter-help-offcanvas', 'is_open'),
-    Output('parameter-help-offcanvas', 'children'),
-    Input('para-help-btn', 'n_clicks'),
-    [State('parameter-help-offcanvas', 'is_open')],
+    Output('runfile-table', 'columnDefs',allow_duplicate=True),
+    Output('runfile-table', 'rowData',allow_duplicate=True),
+    Input('rsr-multi-edit-apply', 'n_clicks'),
+    State('runfile-table', 'selectedRows'),
+    State('runfile-table', 'rowData'),
+    State('data-store', 'data'),
+    State('rsr-multi-edit-dropdown', 'value'),
+    State('rsr-multi-edit-input', 'value'),
     prevent_initial_call=True
 )
-def show_parameter_help_modal(n1, is_open):
-    if n1:
-        return not is_open, ui.create_parameter_help_canvas('rsr')
-    return is_open, None
+def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, new_value):
+    if not n_clicks or not selected_rows:
+        raise PreventUpdate
+
+    # create a dataframe from the rowData
+    row_data_df = pd.DataFrame(row_data).copy()
+
+    # Update all selected rows with the new value for the specified column
+    selected_indices = [row['index'] for row in selected_rows]
+
+    for index in selected_indices:
+        if column not in row_data_df.columns:
+            # add the column if it doesn't exist
+            row_data_df[column] = None
+        row_data_df.at[index, column] = new_value
+
+    # Normalize data: convert empty strings and NaN to None
+    row_data_df = row_data_df.where(pd.notna(row_data_df), None)
+    valid_columns = row_data_df.apply(lambda col: col.notna() & (col != ''), axis=0).any()
+    columns_with_values = row_data_df.columns[valid_columns].tolist()
+    row_data_df = row_data_df[columns_with_values]
+
+    # Generate column definitions
+    column_defs = [
+        {
+            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
+            'field': col,
+            'filter': True,
+            'sortable': True,
+            'headerTooltip': f'{col} column',
+        }
+        for col in columns_with_values
+    ]
+    # Save the updated runfile if applicable
+    runfile = data_store.get('selected_runfile')
+    if runfile:
+        pf.save_runfile(row_data_df, runfile)
+    return column_defs, row_data_df.to_dict('records')
+#
+# if click parameter help button, show the content of the parameter help
+@app.callback(
+    Output('rsr-parameter-help', 'style'),
+    Output('rsr-parameter-help', 'children'),
+    Input('para-help-btn', 'n_clicks'),
+    State('rsr-parameter-help', 'style'),
+    prevent_initial_call=True
+)
+def show_parameter_help(n_clicks, current_style):
+    if not n_clicks:
+        raise PreventUpdate
+
+    if current_style == SHOW_STYLE:
+        return HIDE_STYLE, ''
+    else:
+        return SHOW_STYLE, ui.create_parameter_help(instruments[0])
+
+@app.callback(
+    Output('seq-parameter-help', 'style'),
+    Output('seq-parameter-help', 'children'),
+    Input('para-help-btn', 'n_clicks'),
+    State('seq-parameter-help', 'style'),
+    prevent_initial_call=True
+)
+def toggle_parameter_help(n_clicks, current_style):
+    if not n_clicks:
+        raise PreventUpdate
+
+    # Check if the current style indicates that the help section is visible
+    if current_style == SHOW_STYLE:
+        # Hide the help section
+        return HIDE_STYLE, ''
+    else:
+        # Show the help section
+        return SHOW_STYLE, ui.create_parameter_help(instruments[1])

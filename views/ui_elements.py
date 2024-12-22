@@ -181,55 +181,85 @@ session_layout = html.Div(
     className='session-list-display'
 )
 
-def create_dropdown_parameter(col,multi=False,options=None,**kwargs):
+def create_dropdown_parameter(col,multi=False,**kwargs):
+    label = col.split("-")[1]
+    # label = f'{"Source" if label == "_s" else label}:'
     return html.Div(
         [
-            dbc.Label(f'{col}:'),
-            dcc.Dropdown(id=f'{col}-dropdown', placeholder=f'Select {col}', className='mb-3',multi=multi,),
+            dbc.Label(label),
+            dcc.Dropdown(id=f'{col}-dropdown',
+                         className='mb-3',
+                         multi=multi,),
         ]
     )
-def create_radio_parameter(col, options):
+def create_radio_parameter(col, options, **kwargs):
     return html.Div(
         [
-            dbc.Label(f'{col}:'),
-            dcc.RadioItems(id=f'{col}-radio', options=options,className='mb-3', inputStyle={"margin-right": "10px"}),
+            dbc.Label(f'{col.split("-")[-1]}:'),
+            dcc.RadioItems(id=f'{col}-radio',
+                           options=[{'label': opt, 'value': opt} for opt in options],
+                           className='mb-3',
+                           inputStyle={"margin-right": "10px"}),
         ]
     )
-def create_input_parameter(col):
+def create_input_parameter(col, disabled=False,**kwargs):
+
+    label = col.split("-")[1]
+
+    # label = f'{"Instrument" if label == "_io" else label}:'
+
     return html.Div(
         [
-            dbc.Label(f'{col}:'),
-            dcc.Input(id=f'{col}-input', type='text', className='mb-3'),
+            dbc.Label(label),
+            dcc.Input(id=f'{col}-input',
+                      type='text',
+                      disabled=disabled,
+                      className='mb-3'),
         ]
     )
-def create_textarea_parameter(col):
+def create_textarea_parameter(col, **kwargs):
     return html.Div(
         [
-            dbc.Label(f'{col}:'),
+            dbc.Label(f'{col.split("-")[-1]}:'),
             dcc.Textarea(id=f'{col}-textarea', placeholder=f'Enter {col}', className='mb-3'),
         ]
     )
-def create_checkbox_parameter(col):
+def create_checkbox_parameter(col, **kwargs):
     return html.Div(
         [
-            dbc.Label(f'{col}:'),
+            dbc.Label(f'{col.split("-")[-1]}:'),
             dcc.Checklist(id=f'{col}-checkbox', className='mb-3'),
         ]
     )
 
+def create_label(col, **kwargs):
+
+    return html.Div(
+        [
+            dbc.Label(f'{col.split("-")[-1]}:'),
+            html.Div(id=f'{col}-label', className='mb-3'),
+        ]
+    )
 # Helper function to dynamically create parameter components
+# Centralized function to create parameter components based on type
 def create_parameter_component(param_name, param_type, **kwargs):
-    if param_type == 'dropdown':
-        return dbc.Col(create_dropdown_parameter(param_name, **kwargs), width=kwargs.get('width', 'auto'))
-    elif param_type == 'input':
-        return dbc.Col(create_input_parameter(param_name), width=kwargs.get('width', 'auto'))
-    elif param_type == 'radio':
-        return dbc.Col(create_radio_parameter(param_name, kwargs.get('options', [])), width=kwargs.get('width', 'auto'))
+    component_map = {
+        'dropdown': create_dropdown_parameter,
+        'input': create_input_parameter,
+        'radio': create_radio_parameter,
+        'textarea': create_textarea_parameter,
+        'checkbox': create_checkbox_parameter,
+        'label': create_label,
+    }
+    if param_type in component_map:
+        return dbc.Col(component_map[param_type](param_name, **kwargs), width=kwargs.get('width', 'auto'))
+    return None
 
 # Configuration for each parameter
 rsr_parameter_configs = [
     {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
     {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
+    {'name': '_io', 'type': 'input', 'disabled': True},
     {'name': 'xlines', 'type': 'input'},
     {'name': 'badcb', 'type': 'input'},
     {'name': 'jitter', 'type': 'input'},
@@ -250,58 +280,95 @@ rsr_parameter_configs = [
     {'name': 'speczoom', 'type': 'input'},
 ]
 
+sequoia_parameter_configs = [
+    {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
+    {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
+    {'name': '_io', 'type': 'input','disabled':True},
+    {'name': 'dv', 'type': 'input'},
+    {'name': 'dw', 'type': 'input'},
+    {'name': 'extent', 'type': 'input'},
+    {'name': 'restart', 'type': 'input'},
+    {'name': 'birdies', 'type': 'input'},
+    {'name': 'public', 'type': 'input'},
+    {'name': 'qagrade', 'type': 'input'},
+]
+
+rsr_cols = [f"rsr-{config['name']}" for config in rsr_parameter_configs]
+seq_cols = [f"seq-{config['name']}" for config in sequoia_parameter_configs]
 # Build layout dynamically
-rsr_parameter_layout_single_row = html.Div(
+def parameter_layout_single_row(instrument,parameter_configs):
+
+    return html.Div(
     [
         dbc.Row(
             [
                 create_parameter_component(
-                    config['name'], config['type'],
+                    f"{instrument}-{config['name']}",
+                    config['type'],
                     multi=config.get('multi'),
+                    disabled=config.get('disabled'),
                     options=config.get('options'),
                     width=config.get('width')
                 )
-                for config in rsr_parameter_configs
+                for config in parameter_configs
             ]
         ),
         dbc.Row([
-                    dbc.Col(dbc.Button('Apply', id='edit-apply', color='primary', className='mt-3'), width='auto'),
-                    dbc.Col(dbc.Button('Cancel', id='edit-cancel', color='danger', className='mt-3'), width='auto'),
+                    dbc.Col(dbc.Button('Apply', id=f'{instrument}-single-edit-apply', color='primary', className='mt-3'), width='auto'),
+                    dbc.Col(dbc.Button('Cancel', id=f'{instrument}-single-edit-cancel', color='danger', className='mt-3'), width='auto'),
                     ], className='d-flex justify-content-end')
     ], id='parameter-layout'
 )
-sequoia_parameter_layout_single_row = html.Div()
-rsr_parameter_layout_multi_row = html.Div(dbc.Row([
-    dbc.Col(dbc.Label('Select a Parameter'),width='auto'),
-    dbc.Col(dbc.Select(id='multi-edit-dropdown',
-                       options=[{'label': config['name'], 'value': config['name']}
-                                for config in rsr_parameter_configs if config['name'] not in ['obsnum', '_s']],
-                       ),width='auto'),
-    dbc.Col(dbc.Label('New Value'),width='auto'),
-    dbc.Col(dcc.Input(id='multi-edit-input', type='text'),width='auto'),
-    dbc.Col(dbc.Button('Apply', id='rsr-multi-edit-apply', color='primary'),width='auto'),
-    dbc.Col(dbc.Button('Cancel', id='rsr-multi-edit-cancel', color='danger'),width='auto'),
-]),className='d-flex align-items-center',id='multi-rsr-parameter')
-sequoia_parameter_layout_multi_row = html.Div()
-def create_instrument_parameter_layout(instrument, row_length):
-    if row_length == 1:
-        if instrument == 'rsr':
-            return rsr_parameter_layout_single_row
-        elif instrument == 'sequoia':
-            return sequoia_parameter_layout_single_row
-        else:
-            return None
-    elif row_length > 1:
-        if instrument == 'rsr':
-            return rsr_parameter_layout_multi_row
-        elif instrument == 'sequoia':
-            return sequoia_parameter_layout_multi_row
-        else:
-            return None
-    else:
-        return None
+# rsr_parameter_layout_single_row = parameter_layout_single_row(rsr_parameter_configs)
+# sequoia_parameter_layout_single_row = parameter_layout_single_row(sequoia_parameter_configs)
 
-def create_parameter_layout_modal(instrument,row_length):
+# rsr_parameter_layout_multi_row = html.Div(dbc.Row([
+#     dbc.Col(dbc.Label('Select a Parameter'),width='auto'),
+#     dbc.Col(dbc.Select(id='multi-edit-dropdown',
+#                        options=[{'label': config['name'], 'value': config['name']}
+#                                 for config in rsr_parameter_configs if config['name'] not in ['obsnum', '_s']],
+#                        ),width='auto'),
+#     dbc.Col(dbc.Label('New Value'),width='auto'),
+#     dbc.Col(dcc.Input(id='multi-edit-input', type='text'),width='auto'),
+#     dbc.Col(dbc.Button('Apply', id='rsr-multi-edit-apply', color='primary'),width='auto'),
+#     dbc.Col(dbc.Button('Cancel', id='rsr-multi-edit-cancel', color='danger'),width='auto'),
+# ]),className='d-flex align-items-center',id='multi-rsr-parameter')
+# sequoia_parameter_layout_multi_row = html.Div()
+
+def parameter_layout_multi_row(instrument,parameter_configs):
+    return html.Div(
+        dbc.Row(
+            [
+                dbc.Col(dbc.Label('Select a Parameter'), width='auto'),
+                dbc.Col(
+                    dbc.Select(
+                        id=f'{instrument}-multi-edit-dropdown',
+                        options=[
+                            {'label': config['name'], 'value': config['name']}
+                            for config in parameter_configs if config['name'] not in ['obsnum', '_s','_io']
+                        ],
+                    ),
+                    width='auto',
+                ),
+                dbc.Col(dbc.Label('New Value'), width='auto'),
+                dbc.Col(dcc.Input(id=f'{instrument}-multi-edit-input', type='text'), width='auto'),
+                dbc.Col(dbc.Button('Apply', id=f'{instrument}-multi-edit-apply', color='primary'), width='auto'),
+                dbc.Col(dbc.Button('Cancel', id=f'{instrument}-multi-edit-cancel', color='danger'), width='auto'),
+            ],
+            className='d-flex align-items-center mb-5',
+            id=f'multi-{instrument}-parameter',
+        )
+    )
+
+# Wrapper to select appropriate layout based on instrument and row length
+def create_instrument_parameter_layout(instrument, row_length, configs):
+    if row_length == 1:
+        return parameter_layout_single_row(instrument,configs)
+    elif row_length > 1:
+        return parameter_layout_multi_row(instrument,configs)
+    return None
+
+def create_parameter_layout_modal(instrument,row_length,configs):
 
     return dbc.Modal(
     [
@@ -311,10 +378,17 @@ def create_parameter_layout_modal(instrument,row_length):
         ),
         dbc.ModalBody(
             html.Div([
-                create_instrument_parameter_layout(instrument, row_length),
-                dbc.Offcanvas(id='parameter-help-offcanvas', is_open=False, children=[]),
+                create_instrument_parameter_layout(instrument, row_length, configs),
+
+                html.Div(id=f'{instrument}-parameter-help',style={'display':'none'}),
+                # dbc.Offcanvas(id='parameter-help-offcanvas', is_open=False, children=[]),
               ],id='layouts'),),
-    ],id='parameter-edit-modal', size='xl', centered=True, scrollable=True,backdrop='static')
+    ],id='parameter-edit-modal',
+        size='xl',
+        centered=True,
+        scrollable=True,
+        backdrop='static'
+    )
 
 runfile_layout = html.Div(
     dbc.Card(
@@ -467,7 +541,7 @@ job_status_layout = dbc.Card(
     ]
 )
 
-def create_parameter_help_canvas(instrument):
+def create_parameter_help(instrument):
     if instrument == 'rsr':
         return html.P([
             html.H5("PI Parameters:"),

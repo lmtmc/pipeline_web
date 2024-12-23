@@ -477,59 +477,31 @@ submit_job_layout = html.Div(
                 dbc.CardFooter([
                     dbc.Row(
                     [
-                        dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True)),
+                        dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True),width='auto'),
+
                     ],
-                        justify='end')
+                        )
                 ],
                 ),
-            ],
+            ], style={'height': '200px'}
                 # className='justify-content-between align-items-end',
             ),
         html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
-])
+],)
 
 job_status_layout = dbc.Card(
     [
-        dbc.CardHeader("Job Status on Unity", className="title-link"),
-        dbc.CardBody(
-            [
-                dbc.Row(
-            [
-                dbc.Col(dbc.Label('Select an option'), width='auto'),
-                dbc.Col(dcc.Dropdown(id='job-status-option',
-                                         options=['Account', 'Job ID', 'Job Name'],value='Account',
-                                         ), width=2),
-                dbc.Col([
-
-                    dbc.Input(id="user-id-input", type="text",value='lmthelpdesk_umass_edu', placeholder="Enter", ),
-                ],width='auto',
-                ),
-                dbc.Col(
+        dbc.CardHeader(dbc.Row([
+            dbc.Col("Job Status on Unity", className="title-link", width='auto'),
+            dbc.Col(
                     dbc.Button("Check Status", id="check-status-btn", color="primary", ),
                     width='auto',
                 ),
-
-
-                # dbc.Col(
-                #     dbc.Input(id="job-id-input", placeholder="Enter Job Id", type="text"),
-                #     width='auto',
-                # ),
-                # dbc.Col(
-                #     dbc.Button("Cancel Job", id="cancel-job-btn", color="secondary", ),
-                #     width='auto',
-                # ),
-            ],
-            className="mt-3 align-items-center",
-        ),
-
-        dcc.ConfirmDialog(
-            id='cancel-job-confirm-dialog',
-            message='Are you sure you want to cancel the job?',
-        ),
-        html.Div(id="slurm-job-status-output", className="mt-4"),
-    ]),
-    ]
+        ])),
+        dbc.CardBody(html.Div(id="slurm-job-status-output", className="mt-4")),
+        ],style={'height': '200px'}
 )
+
 
 def create_parameter_help(instrument):
     if instrument == 'rsr':

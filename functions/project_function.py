@@ -403,6 +403,32 @@ def check_slurm_job_status(check_option,username):
     else:
         return f"Error: {result['stderr']}", False
 
+def check_runfile_job_status(runfile_path):
+    runfile_path = os.path.join(runfile_path,'.jobid')
+    print(f"Checking job status for runfile: {runfile_path}")
+    if not os.path.exists(runfile_path):
+        return "Runfile does not exist", False
+    # open jobid file and read the job id each line is a job id
+    with open(runfile_path, 'r') as file:
+        job_ids = file.read().splitlines()
+    if not job_ids:
+        return "No job IDs found", False
+    # check the status of each job id
+    job_statuses = []
+    for job_id in job_ids:
+        command = f"squeue -j {job_id} -o '%i|%t'"
+        result = execute_ssh_command(command)
+        if result["returncode"] == 0:
+            output = result["stdout"].strip()
+            lines = output.splitlines()[1:]
+            for line in lines:
+                job_id, status = line.split("|")
+                job_statuses.append({"Job ID": job_id, "State": status})
+        else:
+            return f"Error checking job status: {result['stderr']}", False
+    return job_statuses, True
+
+
 def cancel_slurm_job(job_id):
     command = f"scancel {job_id}"
     result = execute_ssh_command(command)

@@ -231,16 +231,13 @@ def submit_job(n_clicks, selected_runfile, email):
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),
     Input("check-status-btn", "n_clicks"),
-    State('job-status-option', 'value'),
-    State("user-id-input", "value"),
+    State('data-store', 'data'),
     prevent_initial_call=True,
 )
-def update_job_status(n_clicks, check_option,user_id):
-    if not user_id:
-        return dbc.Alert("Please enter a valid User ID.", color="warning", dismissable=True)
-
-    status, success = pf.check_slurm_job_status(check_option,user_id)
-
+def update_job_status(n_clicks, data):
+    selected_runfile= data.get('selected_runfile')
+    status, success = pf.check_runfile_job_status(selected_runfile)
+    file_name = os.path.basename(selected_runfile)
     if success:
         # If jobs are found, display them in a table
         if isinstance(status, list) and status:
@@ -251,7 +248,7 @@ def update_job_status(n_clicks, check_option,user_id):
             ]
 
             return html.Div([
-                html.H5(f"Current job status for {user_id}"),
+                html.H5(f"Current job status for {file_name}"),
                 dbc.Table(
                     [
                         html.Thead(html.Tr([html.Th(header) for header in headers])),

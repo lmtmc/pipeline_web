@@ -404,7 +404,7 @@ def check_slurm_job_status(check_option,username):
         return f"Error: {result['stderr']}", False
 
 def check_runfile_job_status(runfile_path):
-    runfile_path = os.path.join(runfile_path,'.jobid')
+    runfile_path = f"{runfile_path}.jobid"
     print(f"Checking job status for runfile: {runfile_path}")
     if not os.path.exists(runfile_path):
         return "Runfile does not exist", False

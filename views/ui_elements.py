@@ -224,12 +224,15 @@ def create_textarea_parameter(col, **kwargs):
             dcc.Textarea(id=f'{col}-textarea', placeholder=f'Enter {col}', className='mb-3'),
         ]
     )
-def create_checkbox_parameter(col, **kwargs):
+def create_checkbox_parameter(col, options,**kwargs):
     return html.Div(
         [
             dbc.Label(f'{col.split("-")[-1]}:'),
-            dcc.Checklist(id=f'{col}-checkbox', className='mb-3'),
-        ]
+            dcc.Checklist(id=f'{col}-checkbox',
+                          className='mb-3',
+                          options = options,
+                          inline=True),
+        ],
     )
 
 def create_label(col, **kwargs):
@@ -284,6 +287,8 @@ sequoia_parameter_configs = [
     {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
     {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
     {'name': '_io', 'type': 'input','disabled':True},
+    {'name': 'pix_list', 'type': 'checkbox',
+     'options':[{'label': str(i), 'value': str(i)} for i in range(16)],'value':[],'width': 2},
     {'name': 'dv', 'type': 'input'},
     {'name': 'dw', 'type': 'input'},
     {'name': 'extent', 'type': 'input'},
@@ -319,21 +324,6 @@ def parameter_layout_single_row(instrument,parameter_configs):
                     ], className='d-flex justify-content-end')
     ], id='parameter-layout'
 )
-# rsr_parameter_layout_single_row = parameter_layout_single_row(rsr_parameter_configs)
-# sequoia_parameter_layout_single_row = parameter_layout_single_row(sequoia_parameter_configs)
-
-# rsr_parameter_layout_multi_row = html.Div(dbc.Row([
-#     dbc.Col(dbc.Label('Select a Parameter'),width='auto'),
-#     dbc.Col(dbc.Select(id='multi-edit-dropdown',
-#                        options=[{'label': config['name'], 'value': config['name']}
-#                                 for config in rsr_parameter_configs if config['name'] not in ['obsnum', '_s']],
-#                        ),width='auto'),
-#     dbc.Col(dbc.Label('New Value'),width='auto'),
-#     dbc.Col(dcc.Input(id='multi-edit-input', type='text'),width='auto'),
-#     dbc.Col(dbc.Button('Apply', id='rsr-multi-edit-apply', color='primary'),width='auto'),
-#     dbc.Col(dbc.Button('Cancel', id='rsr-multi-edit-cancel', color='danger'),width='auto'),
-# ]),className='d-flex align-items-center',id='multi-rsr-parameter')
-# sequoia_parameter_layout_multi_row = html.Div()
 
 def parameter_layout_multi_row(instrument,parameter_configs):
     return html.Div(

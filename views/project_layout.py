@@ -210,6 +210,10 @@ def submit_job(n_clicks, selected_runfile, email):
         runfile = os.path.basename(selected_runfile)
         result = pf.execute_remote_submit(current_user.username, runfile)
 
+        print('result',type(result),result)
+
+        if not isinstance(result, dict):
+            return html.Pre(f"Unexpected result format: {result}")
         # Step 2: Update UI with the result
         if result["returncode"] == 0:
             result_message = f"Job submitted successfully for {runfile}!\n{result}"
@@ -667,7 +671,7 @@ rsr_outputs = [
 
 seq_outputs = [
     Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['seq-obsnum', 'seq-_s']
-    #else Output(f'{col}-label', 'children') if col == 'seq-_io'
+    else Output(f'{col}-checkbox', 'value') if col == 'seq-pix_list'
     else Output(f'{col}-radio', 'value') if col == 'seq_admit'
     else Output(f'{col}-input', 'value')
     for col in seq_cols
@@ -705,6 +709,7 @@ def show_edit_layout(n1, selected_rows):
     [
         State('runfile-table', 'selectedRows'),
     ],
+    prevent_initial_call=True
 )
 def show_edit_layout(n1, selected_rows):
     if not selected_rows:
@@ -716,7 +721,18 @@ def show_edit_layout(n1, selected_rows):
         raise PreventUpdate
     # Dynamically extract values for all rsr_cols
     cols = [col.split('-')[1] for col in seq_cols]
-    values = [selected_row_data.get(col, None) for col in cols]
+    # Handle 'pix_list' safely
+    pix_list = selected_row_data.get('pix_list')
+    if pix_list is None:
+        selected_row_data['pix_list'] = []
+    elif isinstance(pix_list, str):
+        selected_row_data['pix_list'] = pix_list.split(',')
+
+    values = [
+        selected_row_data.get(col, [] if col == 'pix_list' else None)
+        if col in selected_row_data else []  # Check if 'col' exists in selected_row_data
+        for col in cols
+    ]
     # Return the values in the correct order
     return values
 
@@ -746,17 +762,16 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
     # Map input values to columns
     # remove rsr to match the table column names
     cols = [col.split('-')[1] for col in rsr_cols]
-    print('cols',cols)
-    print('args',args)
+
     updated_values = dict(zip(cols, args))
-    print('updated_values',updated_values)
+
     updated_values['index'] = selected_index
     # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])
-    print('updated_values_df',updated_values_df)
+
     # Create a DataFrame from the existing data
     row_data_df = pd.DataFrame(row_data)
-    print('row_data_df',row_data_df)
+
     # Align columns between existing data and updated values
     row_data_df = row_data_df.reindex(columns=row_data_df.columns.union(updated_values_df.columns, sort=False), fill_value=None)
     updated_values_df = updated_values_df.reindex(columns=row_data_df.columns, fill_value=None)
@@ -802,7 +817,7 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
     State('runfile-table', 'rowData'),
     State('data-store', 'data'),
     *[State(f'{col}-dropdown', 'value') if col in ['seq-obsnum', 'seq-_s']
-      #else State(f'{col}-label', 'value') if col == 'seq-_io'
+      else State(f'{col}-checkbox', 'value') if col == 'seq-pix_list'
       else State(f'{col}-radio', 'value') if col == 'seq-admit'
       else State(f'{col}-input', 'value')
       for col in seq_cols],
@@ -817,9 +832,27 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     if selected_index is None:
         raise PreventUpdate
     # Map input values to columns
-    # remove rsr to match the table column names
+    # remove seq to match the table column names
     cols = [col.split('-')[1] for col in seq_cols]
     updated_values = dict(zip(cols, args))
+
+    # Sort seq-pix_list
+    if 'pix_list' in updated_values:
+        if 'pix_list' in updated_values:
+            pix_list_value = updated_values['pix_list']
+            if isinstance(pix_list_value, list):
+                # Convert list items to integers, sort them, and convert back to strings
+                sorted_pix_list = sorted(int(x) for x in pix_list_value if x.isdigit())
+                updated_values['pix_list'] = ','.join(map(str, sorted_pix_list))
+            else:
+                updated_values['pix_list'] = None
+    print('updated_values',updated_values)
+    # Special handling for list-type columns
+    for key, value in updated_values.items():
+        if isinstance(value, list):
+            # Convert list to comma-separated string or None if empty
+            updated_values[key] = ','.join(map(str, value)) if value else None
+    print('updated_values',updated_values)
     updated_values['index'] = selected_index
     # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])

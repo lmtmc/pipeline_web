@@ -208,25 +208,20 @@ def submit_job(n_clicks, selected_runfile, email):
 
     try:
         runfile = os.path.basename(selected_runfile)
-        result = pf.execute_remote_submit(current_user.username, runfile)
 
-        print('result',type(result),result)
+        # Step 1: Submit the job asynchronously
+        pf.execute_remote_submit(current_user.username, runfile)
 
-        if not isinstance(result, dict):
-            return html.Pre(f"Unexpected result format: {result}")
-        # Step 2: Update UI with the result
-        if result["returncode"] == 0:
-            result_message = f"Job submitted successfully for {runfile}!\n{result}"
-            print('result_message',result_message)
-            print('Sending email...',email)
-            pf.send_email('Job submitted successfully', result_message, email)
+        # Step 2: Send confirmation email asynchronously
+        confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully. Please check the status later."
+        if email:
+            pf.send_email('Job Submission Confirmation', confirmation_message, email)
 
-        else:
-            result_message = f"Error in submission: {result['stderr']}"
-        return result_message
+        # Step 3: Notify user in the UI
+        return html.Pre(f"Job submitted successfully for '{runfile}'. Please check the job status later.")
     except Exception as e:
-        error_message = html.Pre(f"Error: {e}")
-        return error_message
+        return html.Pre(f"Error: {e}")
+
 
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),
@@ -236,6 +231,8 @@ def submit_job(n_clicks, selected_runfile, email):
 )
 def update_job_status(n_clicks, data):
     selected_runfile= data.get('selected_runfile')
+    if not selected_runfile:
+        return dbc.Alert("No runfile selected.", color="info", dismissable=True)
     status, success = pf.check_runfile_job_status(selected_runfile)
     file_name = os.path.basename(selected_runfile)
     if success:
@@ -266,17 +263,6 @@ def update_job_status(n_clicks, data):
     else:
         # Show an error if the status retrieval failed
         return dbc.Alert(status, color="danger", dismissable=True)
-# if account is selected, show the default value
-@app.callback(
-    Output("user-id-input", "value"),
-    Input("job-status-option", "value"),
-    prevent_initial_call=True,
-)
-def update_user_id_input(option):
-    if option == "Account":
-        return "lmthelpdesk_umass_edu"
-    return ''
-
 @app.callback(
     Output("cancel-job-confirm-dialog", "displayed"),
     Input("cancel-job-btn", "n_clicks"),
@@ -693,8 +679,24 @@ def show_edit_layout(n1, selected_rows):
         raise PreventUpdate
     # Dynamically extract values for all rsr_cols
     cols = [col.split('-')[1] for col in rsr_cols]
-    values = [selected_row_data.get(col, None) for col in cols]
+
+    # Handle 'obsnum' safely
+    # Create dropdown for obsnum values
+    # if obsnum is a string, split it by comma if it is a list get the first element
+    obsnum_values = selected_row_data.get('obsnum', '')
+    if obsnum_values is None:
+        obsnum_values = ''
+    elif isinstance(obsnum_values, str):
+        obsnum_values = obsnum_values.split(',')
+    elif isinstance(obsnum_values, list):
+        obsnum_values = obsnum_values[0]
+
+    other_values = [
+        selected_row_data.get(col, None) for col in cols if col != 'obsnum'
+    ]
+    values = [obsnum_values] + other_values
     # Return the values in the correct order
+
     return values
 
 # display values for all parameters based on the selected row for seq
@@ -734,6 +736,7 @@ def show_edit_layout(n1, selected_rows):
     return values
 
 #Update the selected row with all parameters for rsr layout
+# TODO : multi obsnum value not displayed correctly
 @app.callback(
     Output('runfile-table', 'columnDefs', allow_duplicate=True),
     Output('runfile-table', 'rowData', allow_duplicate=True),
@@ -782,7 +785,6 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
     # Identify columns with at least one non-None value
     valid_columns = row_data_df.apply(lambda col: col.notna() & (col != ''), axis=0).any()
     columns_with_values = row_data_df.columns[valid_columns].tolist()
-    print('columns_with_values',columns_with_values)
 
     row_data_df = row_data_df[columns_with_values]
 
@@ -843,13 +845,13 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
                 updated_values['pix_list'] = ','.join(map(str, sorted_pix_list))
             else:
                 updated_values['pix_list'] = None
-    print('updated_values',updated_values)
+
     # Special handling for list-type columns
     for key, value in updated_values.items():
         if isinstance(value, list):
             # Convert list to comma-separated string or None if empty
             updated_values[key] = ','.join(map(str, value)) if value else None
-    print('updated_values',updated_values)
+
     updated_values['index'] = selected_index
     # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])

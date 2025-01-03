@@ -183,6 +183,8 @@ def df_runfile(filename):
                 for command in commands:
                     if isinstance(command, str) and "=" in command:
                         key, value = command.split('=', 1)
+                        if key == 'obsnums':
+                            key = 'obsnum'
                         row[key] = value
                 if row:
                     data.append(row)

@@ -182,8 +182,9 @@ session_layout = html.Div(
 )
 
 def create_dropdown_parameter(col,multi=False,**kwargs):
+    print(f'Creating dropdown for {col}',multi)
     label = col.split("-")[1]
-    # label = f'{"Source" if label == "_s" else label}:'
+    label = f'{"source" if label == "_s" else label}:'
     return html.Div(
         [
             dbc.Label(label),
@@ -206,7 +207,7 @@ def create_input_parameter(col, disabled=False,**kwargs):
 
     label = col.split("-")[1]
 
-    # label = f'{"Instrument" if label == "_io" else label}:'
+    label = f'{"instrument" if label == "_io" else label}:'
 
     return html.Div(
         [
@@ -254,6 +255,7 @@ def create_parameter_component(param_name, param_type, **kwargs):
         'checkbox': create_checkbox_parameter,
         'label': create_label,
     }
+
     if param_type in component_map:
         return dbc.Col(component_map[param_type](param_name, **kwargs), width=kwargs.get('width', 'auto'))
     return None
@@ -363,7 +365,7 @@ def create_parameter_layout_modal(instrument,row_length,configs):
     return dbc.Modal(
     [
         dbc.ModalHeader(dbc.Row([
-            dbc.Col(html.H5('Edit Parameters'),width='auto'),
+            dbc.Col(html.H5('EDIT PARAMETERS'),width='auto'),
             dbc.Col(dbc.Button('Parameter Info', id='para-help-btn', color='secondary'))],className='d-flex align-items-center'),
         ),
         dbc.ModalBody(

@@ -459,7 +459,7 @@ display : block !important;
 
 
 .session-list-display, .runfile-content-container{
-    height: 50vh;
+    height: 60vh;
     display: flex; /* Ensure the flex container */
     flex-direction: column; /* Stack items vertically */
     box-sizing: border-box; /* Include padding in height calculation */
@@ -574,4 +574,26 @@ display : block !important;
     /*font-family: 'Courier New', monospace; !* Customize font for the options *!*/
     font-size: 20px;                      /* Customize font size for the options */
     color: #333;                          /* Customize text color */
+}
+
+.edit-btn {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 12px;
+    margin: 2px 2px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.button-group {
+   transition: opacity 0.3s ease-in-out;
+}
+
+.button-group:hover {
+   opacity: 0.9;
 }

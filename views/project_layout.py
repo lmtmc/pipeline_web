@@ -668,8 +668,11 @@ seq_outputs = [
     [
         State('runfile-table', 'selectedRows'),
     ],
+    prevent_initial_call=True
 )
 def show_edit_layout(n1, selected_rows):
+    if not n1:
+        raise PreventUpdate
     if not selected_rows:
         return no_update
     selected_row_data = selected_rows[0]
@@ -683,20 +686,21 @@ def show_edit_layout(n1, selected_rows):
     # Handle 'obsnum' safely
     # Create dropdown for obsnum values
     # if obsnum is a string, split it by comma if it is a list get the first element
+    # Modify the obsnum_values processing:
     obsnum_values = selected_row_data.get('obsnum', '')
+
     if obsnum_values is None:
-        obsnum_values = ''
+        obsnum_values = []
     elif isinstance(obsnum_values, str):
-        obsnum_values = obsnum_values.split(',')
+        obsnum_values = [v.strip() for v in obsnum_values.split(',') if v.strip()]
     elif isinstance(obsnum_values, list):
-        obsnum_values = obsnum_values[0]
+        obsnum_values = [str(v).strip() for v in obsnum_values]
 
     other_values = [
         selected_row_data.get(col, None) for col in cols if col != 'obsnum'
     ]
     values = [obsnum_values] + other_values
     # Return the values in the correct order
-
     return values
 
 # display values for all parameters based on the selected row for seq
@@ -736,7 +740,6 @@ def show_edit_layout(n1, selected_rows):
     return values
 
 #Update the selected row with all parameters for rsr layout
-# TODO : multi obsnum value not displayed correctly
 @app.callback(
     Output('runfile-table', 'columnDefs', allow_duplicate=True),
     Output('runfile-table', 'rowData', allow_duplicate=True),

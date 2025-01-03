@@ -534,17 +534,21 @@ def get_obsnum_options(source, selected_rows, data):
     obsnum_options = data.get('source', {}).get(source)
     obsnum_dropdown_options = [{'label': str(o), 'value': str(o)} for o in obsnum_options]
 
-    # extract the obsnum value from selected rows
+    # Extract and process obsnum values from selected rows
     selected_obsnums = []
     if selected_rows:
         for row in selected_rows:
             obsnum = row.get('obsnum')
             if obsnum:
-                selected_obsnums.append(obsnum)
+                # Handle cases where obsnum is a comma-separated string
+                if isinstance(obsnum, str):
+                    selected_obsnums.extend([v.strip() for v in obsnum.split(',') if v.strip()])
+                elif isinstance(obsnum, list):
+                    selected_obsnums.extend([str(v).strip() for v in obsnum])
 
-    # Flatten list if it contains multiple obsnum lists
-    selected_obsnums = [str(item) for sublist in selected_obsnums for item in
-                        (sublist if isinstance(sublist, list) else [sublist])]
+    # Deduplicate and sort selected obsnums
+    selected_obsnums = sorted(set(selected_obsnums))
+
     # Disable dropdowns if at least one row is selected
     disable_dropdowns = len(selected_rows) > 1
     return obsnum_dropdown_options, selected_obsnums, disable_dropdowns, disable_dropdowns

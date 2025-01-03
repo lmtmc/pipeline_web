@@ -182,7 +182,6 @@ session_layout = html.Div(
 )
 
 def create_dropdown_parameter(col,multi=False,**kwargs):
-    print(f'Creating dropdown for {col}',multi)
     label = col.split("-")[1]
     label = f'{"source" if label == "_s" else label}:'
     return html.Div(
@@ -190,6 +189,7 @@ def create_dropdown_parameter(col,multi=False,**kwargs):
             dbc.Label(label),
             dcc.Dropdown(id=f'{col}-dropdown',
                          className='mb-3',
+                         options=[],
                          multi=multi,),
         ]
     )
@@ -382,19 +382,22 @@ def create_parameter_layout_modal(instrument,row_length,configs):
         backdrop='static'
     )
 
-runfile_layout = html.Div(
+runfile_layout = html.Div([
+
     dbc.Card(
         [
             dbc.CardHeader(
                 dbc.Row(
                     [
-                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value),className='text-center my-2',width='auto'),
+                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value), className='text-center my-2', width='auto'),
                         dbc.Col(
                             dbc.ButtonGroup([
-                                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value,outline=True, className='btn-icon',color='secondary'),
-                                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, className='btn-icon', color='secondary'),
+                                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value, outline=True,
+                                           className='btn-icon', color='secondary'),
+                                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True,
+                                           className='btn-icon', color='secondary'),
                             ],
-                                #size='lg',
+                                # size='lg',
                             ),
                             width='auto', className='d-flex justify-content-center align-items-center'),
                     ], className='align-items-center'
@@ -402,43 +405,50 @@ runfile_layout = html.Div(
             ),
             dbc.CardBody(
                 [
+                    html.Div([
+                       dbc.Row([
+                           dbc.Col([
+                               dbc.ButtonGroup([
+                                   dbc.Button('Edit Row', id=Table.EDIT_BTN.value, color='primary', className='me-2'),
+                                   dbc.Button('Delete Row', id=Table.DEL_ROW_BTN.value, color='danger', className='me-2'),
+                                   dbc.Button('Clone Row', id=Table.CLONE_ROW_BTN.value, color='success')
+                               ])
+                           ], width='auto')
+                       ], className='gx-2 py-2 bg-light rounded shadow-sm'),
+                    ], id=Table.OPTION.value,
+                      style={
+                          'display': 'none',
+                          'position': 'absolute',
+                          'right': '20px',
+                          'zIndex': 1000
+                      }),
                     html.Div(
-                    [
-                        dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
-                        AgGrid(
-                            id='runfile-table',
-                            rowData=[],
-                            defaultColDef={
-                                            "filter": True,
-                                            "checkboxSelection": {
-                                                "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
-                                            },
-                                            "headerCheckboxSelection": {
-                                                "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
-                                            }
-                                        },
-                            dashGridOptions={
-                                "rowSelection": "multiple",
-                                "rowMultiSelectWithClick": True,
-                                "suppressRowClickSelection": True,
-                                'enableBrowserTooltips': True,
-                            },
-
-                            className="ag-theme-alpine",
-                        ),
-                    ]),
-                html.Div(
-                    dbc.Row(
                         [
-                            dbc.Col(dbc.Button('Edit Row', id=Table.EDIT_BTN.value,),width='auto'),
-                            dbc.Col(dbc.Button('Delete Row', id=Table.DEL_ROW_BTN.value,),width='auto'),
-                            dbc.Col(dbc.Button('Clone Row', id=Table.CLONE_ROW_BTN.value,),width='auto'),
-                        ],
-                        className='d-flex align-items-center mt-3',
+                            dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
+                            AgGrid(
+                                id='runfile-table',
+                                rowData=[],
+                                defaultColDef={
+                                    "filter": True,
+                                    "checkboxSelection": {
+                                        "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                                    },
+                                    "headerCheckboxSelection": {
+                                        "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                                    }
+                                },
+                                dashGridOptions={
+                                    "rowSelection": "multiple",
+                                    "rowMultiSelectWithClick": True,
+                                    "suppressRowClickSelection": True,
+                                    'enableBrowserTooltips': True,
+                                },
 
-                    ),id=Table.OPTION.value,
-                        style={'display': 'none'}),
-                dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
+                                className="ag-theme-alpine",
+                            ),
+                        ]),
+
+                    dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
 
                 ],
             ),
@@ -447,7 +457,10 @@ runfile_layout = html.Div(
 
             dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom'),
             dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom'),
-        ]),
+        ], ),
+
+],
+
     id=Runfile.CONTENT_DISPLAY.value,
     className='runfile-content-container'
 )

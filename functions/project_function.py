@@ -552,3 +552,21 @@ def get_obsnum_options(source, selected_rows, data):
     # Disable dropdowns if at least one row is selected
     disable_dropdowns = len(selected_rows) > 1
     return obsnum_dropdown_options, selected_obsnums, disable_dropdowns, disable_dropdowns
+
+def process_job_submission(pid,runfile, email):
+    """
+    Handles the job submission process asynchronously.
+    """
+    try:
+        # Simulate remote submission process (replace with actual logic)
+        print(f"Submitting job for '{runfile}'...")
+        pf.execute_remote_submit(pid, runfile)
+
+        print(f'sending email')
+        # Optional: Send confirmation email asynchronously
+        if email:
+            confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully."
+            pf.send_email('Job Submission Confirmation', confirmation_message, email)
+    except Exception as e:
+        # Log the exception for debugging (could also send an email or update a status)
+        print(f"Error during job submission for '{runfile}': {e}")

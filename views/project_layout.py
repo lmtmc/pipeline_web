@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+from threading import Thread
 
 import flask
 import pandas as pd
@@ -206,22 +207,15 @@ def submit_job(n_clicks, selected_runfile, email):
     if not selected_runfile:
         return html.Pre('No runfile selected.')
 
-    try:
-        runfile = os.path.basename(selected_runfile)
+    runfile = os.path.basename(selected_runfile)
 
-        # Step 1: Submit the job asynchronously
-        pf.execute_remote_submit(current_user.username, runfile)
+    # Step 1: Notify user in the UI
+    confirmation_message = (f"Job for runfile '{runfile}' has been submitted. "
+                            f"You will get an email notification if the submission is successful.")
 
-        # Step 2: Send confirmation email asynchronously
-        confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully. Please check the status later."
-        if email:
-            pf.send_email('Job Submission Confirmation', confirmation_message, email)
-
-        # Step 3: Notify user in the UI
-        return html.Pre(f"Job submitted successfully for '{runfile}'. Please check the job status later.")
-    except Exception as e:
-        return html.Pre(f"Error: {e}")
-
+    # step 2: Submit the job
+    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, email)).start()
+    return html.Pre(confirmation_message)
 
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),

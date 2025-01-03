@@ -560,13 +560,13 @@ def process_job_submission(pid,runfile, email):
     try:
         # Simulate remote submission process (replace with actual logic)
         print(f"Submitting job for '{runfile}'...")
-        pf.execute_remote_submit(pid, runfile)
+        execute_remote_submit(pid, runfile)
 
         print(f'sending email')
         # Optional: Send confirmation email asynchronously
         if email:
             confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully."
-            pf.send_email('Job Submission Confirmation', confirmation_message, email)
+            send_email('Job Submission Confirmation', confirmation_message, email)
     except Exception as e:
         # Log the exception for debugging (could also send an email or update a status)
         print(f"Error during job submission for '{runfile}': {e}")

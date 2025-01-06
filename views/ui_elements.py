@@ -155,8 +155,8 @@ session_layout = html.Div(
                                className='btn-icon'),
                 ]), width='auto',
         ),
-            dbc.Tooltip("Clone Session", target=Session.NEW_BTN.value, placement='bottom'),
-            dbc.Tooltip("Delete Session", target=Session.DEL_BTN.value, placement='bottom'),
+            dbc.Tooltip("Clone Session", target=Session.NEW_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
+            dbc.Tooltip("Delete Session", target=Session.DEL_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
             ], className='d-flex justify-content-end'),
         html.Div(
             dbc.Accordion(
@@ -455,8 +455,8 @@ runfile_layout = html.Div([
             clone_runfile_modal,
             dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
 
-            dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom'),
-            dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom'),
+            dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
+            dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
         ], ),
 
 ],

@@ -405,7 +405,9 @@ def check_slurm_job_status(check_option,username):
     else:
         return f"Error: {result['stderr']}", False
 
+# TODO get the obsnums from the runfile if the column name is obsnum get the first obsnum and add_1 if column name is obsnums
 def check_runfile_job_status(runfile_path):
+    print(f'runfile_path: {runfile_path}')
     # Append .jobid to the file name
     jobid_file = f"{runfile_path}.jobid"
 
@@ -562,7 +564,6 @@ def process_job_submission(pid,runfile, email):
         print(f"Submitting job for '{runfile}'...")
         execute_remote_submit(pid, runfile)
 
-        print(f'sending email')
         # Optional: Send confirmation email asynchronously
         if email:
             confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully."

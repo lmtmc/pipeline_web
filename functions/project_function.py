@@ -407,24 +407,21 @@ def check_slurm_job_status(check_option,username):
 
 # TODO get the obsnums from the runfile if the column name is obsnum get the first obsnum and add_1 if column name is obsnums
 def check_runfile_job_status(runfile_path):
-    print(f'runfile_path: {runfile_path}')
-    # Append .jobid to the file name
-    jobid_file = f"{runfile_path}.jobid"
+    # get all the obsnums from the runfile
+    df, _ = df_runfile(runfile_path)
+    if 'obsnum' not in df.columns:
+        return []
+    obsnums = []
+    for obsnum in df['obsnum']:
+        try:
+            obsnums.extend([int(num) for num in obsnum.split(',')])
+        except ValueError:
+            print(f"Error converting obsnum to integer: {obsnum}")
 
-    if not os.path.exists(jobid_file):
-        return "Runfile does not exist or .jobid file is missing", False
-
-    # Read job IDs from the file
-    with open(jobid_file, 'r') as file:
-        job_ids = file.read().splitlines()
-
-    if not job_ids:
-        return "No job IDs found", False
-
-    # Check the status of each job ID
+    #Check the status of each job ID
     job_statuses = []
-    for job_id in job_ids:
-        command = f"squeue -j {job_id} -o '%i|%t'"
+    for name in obsnums:
+        command = f"squeue --name {name} -o '%A|%T'"
         result = execute_ssh_command(command)
 
         if result["returncode"] == 0:
@@ -433,8 +430,8 @@ def check_runfile_job_status(runfile_path):
             for line in lines:
                 job_id, status = line.split("|")
                 if status == "R":  # Only include running jobs
-                    job_statuses.append({"Job ID": job_id, "State": status})
-        elif "Invalid job id specified" in result["stderr"]:
+                    job_statuses.append({"Name": name, "State": status})
+        elif "Invalid job name specified" in result["stderr"]:
             # Skip invalid job IDs
             continue
         else:
@@ -445,7 +442,44 @@ def check_runfile_job_status(runfile_path):
 
     return job_statuses, True
 
-
+# def check_runfile_job_status(runfile_path):
+#     print(f'runfile_path: {runfile_path}')
+#     # Append .jobid to the file name
+#     jobid_file = f"{runfile_path}.jobid"
+#
+#     if not os.path.exists(jobid_file):
+#         return "Runfile does not exist or .jobid file is missing", False
+#
+#     # Read job IDs from the file
+#     with open(jobid_file, 'r') as file:
+#         job_ids = file.read().splitlines()
+#
+#     if not job_ids:
+#         return "No job IDs found", False
+#
+#     # Check the status of each job ID
+#     job_statuses = []
+#     for job_id in job_ids:
+#         command = f"squeue -j {job_id} -o '%i|%t'"
+#         result = execute_ssh_command(command)
+#
+#         if result["returncode"] == 0:
+#             output = result["stdout"].strip()
+#             lines = output.splitlines()[1:]
+#             for line in lines:
+#                 job_id, status = line.split("|")
+#                 if status == "R":  # Only include running jobs
+#                     job_statuses.append({"Job ID": job_id, "State": status})
+#         elif "Invalid job id specified" in result["stderr"]:
+#             # Skip invalid job IDs
+#             continue
+#         else:
+#             return f"Error checking job status: {result['stderr']}", False
+#
+#     if not job_statuses:
+#         return "No running jobs found.", False
+#
+#     return job_statuses, True
 
 
 def cancel_slurm_job(job_id):

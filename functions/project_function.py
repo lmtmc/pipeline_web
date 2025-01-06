@@ -407,40 +407,50 @@ def check_slurm_job_status(check_option,username):
 
 # TODO get the obsnums from the runfile if the column name is obsnum get the first obsnum and add_1 if column name is obsnums
 def check_runfile_job_status(runfile_path):
-    # get all the obsnums from the runfile
-    df, _ = df_runfile(runfile_path)
-    if 'obsnum' not in df.columns:
-        return []
-    obsnums = []
-    for obsnum in df['obsnum']:
-        try:
-            obsnums.extend([int(num) for num in obsnum.split(',')])
-        except ValueError:
-            print(f"Error converting obsnum to integer: {obsnum}")
+    # Validate the runfile path
+    if not runfile_path or not os.path.exists(runfile_path):
+        return "Invalid runfile path.", False
 
-    #Check the status of each job ID
-    job_statuses = []
-    for name in obsnums:
-        command = f"squeue --name {name} -o '%A|%T'"
-        result = execute_ssh_command(command)
+    try:
+        # Parse the runfile
+        df, _ = df_runfile(runfile_path)
+        if 'obsnum' not in df.columns:
+            return "No 'obsnum' column found in runfile.", False
 
-        if result["returncode"] == 0:
-            output = result["stdout"].strip()
-            lines = output.splitlines()[1:]
-            for line in lines:
-                job_id, status = line.split("|")
-                if status == "R":  # Only include running jobs
-                    job_statuses.append({"Name": name, "State": status})
-        elif "Invalid job name specified" in result["stderr"]:
-            # Skip invalid job IDs
-            continue
-        else:
-            return f"Error checking job status: {result['stderr']}", False
+        obsnums = []
+        for obsnum in df['obsnum']:
+            try:
+                obsnums.extend([int(num) for num in obsnum.split(',')])
+            except ValueError:
+                print(f"Error converting obsnum to integer: {obsnum}")
 
-    if not job_statuses:
-        return "No running jobs found.", False
+        # Check the status of each job ID
+        job_statuses = []
+        for name in obsnums:
+            command = f"squeue --name {name} -o '%A|%T'"
+            result = execute_ssh_command(command)
 
-    return job_statuses, True
+            if result["returncode"] == 0:
+                output = result["stdout"].strip()
+                lines = output.splitlines()[1:]
+                for line in lines:
+                    job_id, status = line.split("|")
+                    if status == "R":  # Only include running jobs
+                        job_statuses.append({"Name": name, "State": status})
+            elif "Invalid job name specified" in result["stderr"]:
+                # Skip invalid job IDs
+                continue
+            else:
+                return f"Error checking job status: {result['stderr']}", False
+
+        if not job_statuses:
+            return "No running jobs found.", False
+
+        return job_statuses, True
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return "An unexpected error occurred.", False
+
 
 # def check_runfile_job_status(runfile_path):
 #     print(f'runfile_path: {runfile_path}')

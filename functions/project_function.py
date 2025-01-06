@@ -407,6 +407,8 @@ def check_slurm_job_status(check_option,username):
 
 # TODO get the obsnums from the runfile if the column name is obsnum get the first obsnum and add_1 if column name is obsnums
 def check_runfile_job_status(runfile_path):
+    import os
+
     # Validate the runfile path
     if not runfile_path or not os.path.exists(runfile_path):
         return "Invalid runfile path.", False
@@ -417,6 +419,7 @@ def check_runfile_job_status(runfile_path):
         if 'obsnum' not in df.columns:
             return "No 'obsnum' column found in runfile.", False
 
+        # Collect all job names from 'obsnum' column
         obsnums = []
         for obsnum in df['obsnum']:
             try:
@@ -424,29 +427,34 @@ def check_runfile_job_status(runfile_path):
             except ValueError:
                 print(f"Error converting obsnum to integer: {obsnum}")
 
-        # Check the status of each job ID
-        job_statuses = []
-        for name in obsnums:
-            command = f"squeue --name {name} -o '%A|%T'"
-            result = execute_ssh_command(command)
+        # Deduplicate job names
+        obsnums = list(set(obsnums))
 
-            if result["returncode"] == 0:
-                output = result["stdout"].strip()
-                lines = output.splitlines()[1:]
-                for line in lines:
-                    job_id, status = line.split("|")
-                    if status == "R":  # Only include running jobs
-                        job_statuses.append({"Name": name, "State": status})
-            elif "Invalid job name specified" in result["stderr"]:
-                # Skip invalid job IDs
-                continue
-            else:
-                return f"Error checking job status: {result['stderr']}", False
+        # Check the status of all jobs in one `squeue` call
+        job_names_str = ",".join(map(str, obsnums))
+        command = f"squeue --name={job_names_str} -o '%A|%j|%T'"
+        result = execute_ssh_command(command)
+
+        if result["returncode"] != 0:
+            return f"Error checking job status: {result['stderr']}", False
+
+        # Parse the output
+        output = result["stdout"].strip()
+        lines = output.splitlines()[1:]  # Skip header
+        job_statuses = []
+
+        for line in lines:
+            try:
+                job_id, job_name, status = line.split("|")
+                job_statuses.append({"Job ID": job_id, "Name": job_name, "State": status})
+            except ValueError:
+                print(f"Error parsing line: {line}")
 
         if not job_statuses:
             return "No running jobs found.", False
 
         return job_statuses, True
+
     except Exception as e:
         print(f"Unexpected error: {e}")
         return "An unexpected error occurred.", False

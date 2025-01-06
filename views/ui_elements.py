@@ -476,47 +476,25 @@ submit_job_layout = html.Div(
                         dbc.Row([
                             dbc.Col([
                                 dbc.Label('Select Runfiles'),
-                                dcc.Dropdown(id = Session.RUNFILE_SELECT.value, placeholder='Select Runfiles'),
-                            ]),
+                                dcc.Dropdown(id = Session.RUNFILE_SELECT.value, placeholder='Select Runfiles', style={'width':'100%'}),
+                            ],width=2),
                             dbc.Col([
                                 dbc.Label('Input email address for notification'),
-                                dbc.Input(id='email-input', placeholder='Enter email address', type='email', className='mb-3'),
-                            ])]
+                                dbc.Input(id='email-input', placeholder='Enter email address', type='email', style={'width':'100%'}),
+                            ],width=2),
+                            dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True,className="w-100"), width='auto'),
+                            dbc.Col(dbc.Button("Check Status", id="check-status-btn", color="primary", className="w-100"),
+                                    width='auto', ),
+                        ], align='end',
                         ),
-                        dcc.Link('Open Result',
-                                 href='',
-                                 id='view-result-url',
-                                 target='_blank',
-                                 style={'display': 'none', 'color': 'grey'}),
+                        html.Div(id="slurm-job-status-output", className="mt-4")
                     ]),
-                dbc.CardFooter([
-                    dbc.Row(
-                    [
-                        dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True),width='auto'),
 
-                    ],
-                        )
-                ],
-                ),
-            ], style={'height': '200px'}
+            ], style={'maxHeight': '500px'}
                 # className='justify-content-between align-items-end',
             ),
         html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
 ],)
-
-job_status_layout = dbc.Card(
-    [
-        dbc.CardHeader(dbc.Row([
-            dbc.Col("Job Status on Unity", className="title-link", width='auto'),
-            dbc.Col(
-                    dbc.Button("Check Status", id="check-status-btn", color="primary", ),
-                    width='auto',
-                ),
-        ])),
-        dbc.CardBody(html.Div(id="slurm-job-status-output", className="mt-4")),
-        ],style={'height': '200px'}
-)
-
 
 def create_parameter_help(instrument):
     if instrument == 'rsr':

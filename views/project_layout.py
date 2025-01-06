@@ -47,10 +47,11 @@ layout = html.Div(
             ],width=2,),
             dbc.Col(ui.runfile_layout, width=10),
         ], className='mb-3'),
-        dbc.Row([
-            dbc.Col(ui.submit_job_layout,),
-            dbc.Col(ui.job_status_layout,),
-        ]),
+        ui.submit_job_layout,
+        # dbc.Row([
+        #     dbc.Col(ui.submit_job_layout,),
+        #     dbc.Col(ui.job_status_layout,),
+        # ]),
         html.Div(id='parameter-edit-selector'),
 
      ]

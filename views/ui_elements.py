@@ -411,10 +411,10 @@ runfile_layout = html.Div([
                 ),
                 dbc.Col(
                     dbc.ButtonGroup([
-                        dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
-                                   className='me-2'),  # Using me-2 instead of margin-right
-                        dbc.Button("Check Status", id="check-status-btn", color='secondary',
-                                   className='me-2'),
+                        html.Div(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
+                                   className='me-2'), id='runfile-run-btn'),  # Using me-2 instead of margin-right
+                        html.Div(dbc.Button("Check Status", id="check-status-btn", color='secondary',
+                                   className='me-2'), id='runfile-check-status-btn'),
                         dbc.Button("View Result", id='view-result-link', color='success')
                     ], size='md'),
                     className='d-flex justify-content-end',  # Align buttons to the right

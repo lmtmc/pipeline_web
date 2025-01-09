@@ -31,7 +31,7 @@ username = config['ssh']['username']
 # Define the commands
 user = 'pipeline_web'
 set_user_command = f'WORK_LMT_USER={user}'
-dispatch_command = 'lmtoy_dispatch/lmtoy_dispatch.sh'
+dispatch_command = 'lmtoy_dispatch/lmtoy_dispatch_session.sh'
 mk_runs_command = 'lmtoy_dispatch/lmtoy_mk_runs.sh'
 
 
@@ -396,7 +396,7 @@ def execute_ssh_command(command, set_user_command=None):
         print("SSH connection closed.")
 def execute_remote_submit(pid, runfile,session):
     # Create the full command to run remotely in the background with nohup
-    full_command = f"{dispatch_command} {pid} {runfile}{session}"
+    full_command = f"{dispatch_command} {pid} {runfile} {session}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
     if result["returncode"] == 0:
         return "Job submitted successfully."
@@ -667,7 +667,7 @@ def process_job_submission(pid,runfile, session,email):
     try:
         # Simulate remote submission process (replace with actual logic)
         print(f"Submitting job for '{runfile}'...")
-        execute_remote_submit(pid, runfile,session)
+        execute_remote_submit(pid, runfile ,session)
 
         # Optional: Send confirmation email asynchronously
         if email:

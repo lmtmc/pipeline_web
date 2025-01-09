@@ -407,7 +407,7 @@ runfile_layout = html.Div([
                 dbc.Col(
                     dbc.Label(id=Runfile.CONTENT_TITLE.value),
                     className='d-flex align-items-center',  # Center vertically
-                    width=9
+                    width=8
                 ),
                 dbc.Col(
                     dbc.ButtonGroup([

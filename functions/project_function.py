@@ -679,4 +679,4 @@ def process_job_submission(pid,runfile, session,email):
 
 def generate_result_url(pid, session_name):
     # return http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/2023-S1-US-17/Session-1/2023-S1-US-17/README.html
-    return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/README.html"
+    return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/{pid}/README.html"

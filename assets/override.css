@@ -597,3 +597,28 @@ display : block !important;
 .button-group:hover {
    opacity: 0.9;
 }
+
+.small-button {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+.small-button:hover {
+    opacity: 0.85;  /* Slightly fade on hover */
+    transition: opacity 0.3s ease;
+}
+
+.fas {
+    margin-right: 5px;  /* Space between icon and text */
+}
+.tooltip-inner {
+    /*background-color: grey !important; !* Set the tooltip background color to white *!*/
+    /*color: black !important; !* Optional: Set the text color to black for better contrast *!*/
+    border: 1px solid #ccc; /* Optional: Add a border */
+    font-size: 16px !important; /* Optional: Increase the font size */
+}
+
+.radio-item {
+    margin-right: 20px;
+}

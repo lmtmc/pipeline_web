@@ -1,15 +1,18 @@
+#TODO for PID 8 not shown the public and qagrade inputbox in the table and parameter edit layout, but keep the value in the runfile
+#TODO get the parameter help from the lmtoy code
+#TODO submit job using the spatch_session.sh
+#TODO monitor the slurm job status. When all finished make summary and send email to the user
+#TODO test the link of the view result button
+
 import logging
 import os
-from pathlib import Path
 from threading import Thread
 
-import flask
 import pandas as pd
 from dash import html, Input, Output, State, ALL, ctx, no_update, dcc
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from flask_login import current_user
-import shutil
 from my_server import app
 from functions import project_function as pf
 from views import ui_elements as ui
@@ -32,11 +35,6 @@ init_session = config['session']['init_session']
 HIDE_STYLE = {'display': 'none'}
 SHOW_STYLE = {'display': 'block'}
 
-# if any of the update_btn get trigger, update the session list
-update_btn = [
-    Session.SAVE_BTN.value, Session.CONFIRM_DEL.value, Runfile.DEL_BTN.value
-]
-
 layout = html.Div(
     [
         # dcc.Interval(id='check-job-interval', interval=60 * 1000, n_intervals=0),
@@ -47,21 +45,14 @@ layout = html.Div(
             ],width=2,),
             dbc.Col(ui.runfile_layout, width=10),
         ], className='mb-3'),
-        ui.submit_job_layout,
-        # dbc.Row([
-        #     dbc.Col(ui.submit_job_layout,),
-        #     dbc.Col(ui.job_status_layout,),
-        # ]),
+        ui.job_status_layout,
         html.Div(id='parameter-edit-selector'),
-
      ]
 )
 
-# Hide the Delete Session and Edit, delete, clone runfile for the default session
+# Hide the Delete Session for the default session
 @app.callback(
     [
-        Output(Runfile.DEL_BTN.value, 'style'),
-        Output(Runfile.CLONE_BTN.value, 'style'),
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
         Output('data-store', 'data'),
@@ -75,38 +66,36 @@ def default_session(active_session, data_store):
 
     if active_session is None:
         # Hide all buttons if no session is selected
-        return HIDE_STYLE,HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, data_store
+        return HIDE_STYLE, HIDE_STYLE, data_store
 
     if active_session == init_session:
         # Hide delete buttons and show only the new session button for the default session
-        return HIDE_STYLE,HIDE_STYLE, HIDE_STYLE, SHOW_STYLE, data_store
+        return HIDE_STYLE, SHOW_STYLE, data_store
 
     # Default case: Show all buttons
-    return SHOW_STYLE, SHOW_STYLE,SHOW_STYLE, SHOW_STYLE, data_store
+    return SHOW_STYLE, SHOW_STYLE, data_store
 
 
-# update session list
+# update session list when modifying session
+# TODO update the session list when a new session is created or deleted
 @app.callback(
     [
         Output(Session.SESSION_LIST.value, 'children'),
         Output(Session.MODAL.value, 'is_open'),
         Output(Session.MESSAGE.value, 'children'),
         Output(Session.SESSION_LIST.value, 'active_item'),
-        Output(Session.RUNFILE_SELECT.value, 'options'),
     ],
     [
         Input(Session.NEW_BTN.value, 'n_clicks'),
         Input(Session.SAVE_BTN.value, 'n_clicks'),
         Input(Session.CONFIRM_DEL.value, 'submit_n_clicks'),
-        Input(Runfile.CONFIRM_DEL_ALERT.value, 'submit_n_clicks'),
-        Input(Runfile.SAVE_CLONE_RUNFILE_BTN.value, 'n_clicks'),
         Input(Session.SESSION_LIST.value, 'active_item'),
     ],
     [
         State(Session.NAME_INPUT.value, 'value')
     ],
 )
-def update_session_display(n1, n2, n3, n4, n5, active_session, name):
+def update_session_display(n1, n2, n3, active_session, name):
     try:
         triggered_id = ctx.triggered_id
 
@@ -119,7 +108,7 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
         except OSError as e:
             error_message = f"Failed to create directory {pid_path}: {str(e)}"
             logging.error(error_message)
-            return [], False, error_message, None, []
+            return [], False, error_message, None
 
         modal_open, message = no_update, ''
         session_list = pf.get_session_list(init_session, pid_path)
@@ -134,30 +123,19 @@ def update_session_display(n1, n2, n3, n4, n5, active_session, name):
             message = pf.delete_session(pid_path, active_session)
             active_session = None if "Successfully" in message else active_session
 
-        if triggered_id in update_btn:
+        if triggered_id in [Session.SAVE_BTN.value, Session.CONFIRM_DEL.value]:
             active_session = init_session if active_session is None else active_session
 
         # Ensure a valid active session
         active_session = active_session or init_session
 
-        runfile_options, runfile_value = pf.get_runfile_info(active_session, pid_path)
+        # runfile_options, runfile_value = pf.get_runfile_info(active_session, pid_path)
 
-        return session_list, modal_open, message, active_session, runfile_options
+        return session_list, modal_open, message, active_session
 
     except Exception as e:
         logging.error(f"Error in update_session_display: {str(e)}")
         return [], False, f"An error occurred: {str(e)}", None, [], None
-
-# update the label of the submit job
-@app.callback(
-    Output('submit-session-job-label', 'children'),
-    Input(Session.SESSION_LIST.value, 'active_item'),
-    prevent_initial_call=True
-)
-def update_submit_job_label(active_session):
-    if active_session:
-        return f"Submit Job for {active_session}"
-    return "Submit Job"
 
 # display confirmation alert when delete session button is clicked
 @app.callback(
@@ -174,49 +152,54 @@ def display_confirmation(n_clicks, active_item):
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
 
-# Flask route to serve the file, using session as part of the URL
-@app.server.route('/view_result/<username>/<session>')
-def serve_readme(username,session):
-    # Construct the file path using the session from the URL
-    readme_path = os.path.join(pf.get_session_path(current_user.username, session), 'README.html')
-    print(f'Serving README from: {readme_path}')
-    if os.path.exists(readme_path):
-        return flask.send_file(readme_path)
-    else:
-        return 'Error: README.html not found', 404
-# if selected file is not empty and email input is a valid email format show the submit job button
+# if click the view result button go to the url to view the result
 @app.callback(
-    Output(Runfile.RUN_BTN.value, 'disabled'),
-    Input(Session.RUNFILE_SELECT.value, 'value'),
-    Input('email-input', 'value'),
+    Output('result-location', 'href'),
+    Input('view-result-link', 'n_clicks'),
+    State(Session.SESSION_LIST.value, 'active_item'),
     prevent_initial_call=True
 )
-def enable_run_button(selected_runfile, email):
-    if selected_runfile and email and pf.is_valid_email(email):
-        return False
-    return True
+def view_result(n_clicks, active_session):
+    if not active_session:
+        return no_update
+
+    result_url = pf.generate_result_url(current_user.username, active_session)
+    return f"javascript:window.open('{result_url}', '_blank')"
 
 # submit job
+# if submit job is clicked show confirm submit modal, if cancel submit job is clicked hide the modal
+@app.callback(
+    Output('confirm-submit-job', 'is_open'),
+    Input(Runfile.RUN_BTN.value, 'n_clicks'),
+    Input('cancel-submit-job', 'n_clicks'),
+    prevent_initial_call=True
+)
+def show_confirm_submit(n_clicks, cancel_clicks):
+    button_id = ctx.triggered_id
+    if button_id == Runfile.RUN_BTN.value:
+        return True
+    elif button_id == 'cancel-submit-job':
+        return False
 @app.callback(
     Output(Session.SUBMIT_JOB.value, 'children'),
-    Input(Runfile.RUN_BTN.value, 'n_clicks'),
-    State(Session.RUNFILE_SELECT.value, 'value'),
+    Input('confirm-submit-job-btn', 'n_clicks'),
+    State({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    State(Session.SESSION_LIST.value, 'active_item'),
     State('email-input', 'value'),
     prevent_initial_call=True
 )
-def submit_job(n_clicks, selected_runfile, email):
-    if not selected_runfile:
-        return html.Pre('No runfile selected.')
-
+def submit_job(n_clicks,selected_runfile, session,email):
+    print(f"selected_runfile: {selected_runfile}")
+    selected_runfile = next((value for value in selected_runfile if value), None)
     runfile = os.path.basename(selected_runfile)
-
+    if not email:
+        return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True)
     # Step 1: Notify user in the UI
-    confirmation_message = (f"Job for runfile '{runfile}' has been submitted. "
-                            f"You will get an email notification if the submission is successful.")
+    confirmation_message = (f"Job for runfile '{runfile}' has been submitted. ")
 
     # step 2: Submit the job
-    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, email)).start()
-    return html.Pre(confirmation_message)
+    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, session,email)).start()
+    return dbc.Label(confirmation_message, color="success", className="mt-2")
 
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),
@@ -269,34 +252,6 @@ def display_confirm_dialog(n_clicks, job_id):
         return False
     return True
 
-@app.callback(
-    Output("slurm-job-status-output", "children"),
-    Input("cancel-job-confirm-dialog", "submit_n_clicks"),
-    State("job-id-input", "value"),
-    prevent_initial_call=True,
-)
-def cancel_job(n_clicks, job_id):
-    status, success = pf.cancel_slurm_job(job_id)
-    if success:
-        # Display the parsed job status in a table
-        return html.Div([
-            dbc.Alert(f"Job {job_id} has been successfully cancelled.", color="success", dismissable=True),
-            dbc.Table(
-        [
-                    html.Thead(html.Tr([html.Th(header) for header in status.keys()])),
-                    html.Tbody(html.Tr([html.Td(value) for value in status.values()])),
-                ],
-                bordered=True,
-                hover=True,
-                responsive=True,
-                striped=True,
-            ),
-            ],
-        )
-    else:
-        # Show an error or no jobs found message
-        return dbc.Alert(status, color="danger", dismissable=True)
-
 # display selected runfile
 @app.callback(
     [
@@ -304,7 +259,8 @@ def cancel_job(n_clicks, job_id):
         Output(Runfile.CONTENT_DISPLAY.value, 'style'),
         Output('runfile-table', 'rowData', allow_duplicate=True),
         Output('runfile-table', 'columnDefs', allow_duplicate=True),
-        Output('data-store', 'data', allow_duplicate=True)
+        Output('data-store', 'data', allow_duplicate=True),
+        Output('submit-job-confirm-text', 'children'),
     ],
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
@@ -319,7 +275,7 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     current_runfile = next((value for value in selected_runfile if value), None)
 
     if not current_runfile:
-        return '', HIDE_STYLE, '','',data_store
+        return '', HIDE_STYLE, '','',data_store, ''
 
     runfile_title = pf.get_runfile_title(current_runfile, init_session)
     runfile_data,runfile_content = pf.df_runfile(current_runfile)
@@ -338,81 +294,8 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     if ctx.triggered_id == Runfile.CONFIRM_DEL_ALERT.value:
         pf.del_runfile(current_runfile)
     data_store['selected_runfile'] = current_runfile
-    return runfile_title,SHOW_STYLE, row_data, column_defs,data_store
+    return runfile_title,SHOW_STYLE, row_data, column_defs,data_store, f"Are you sure to Submit {runfile_title}?"
 
-# open a modal if clone-runfile button
-@app.callback(
-    Output(Runfile.CLONE_RUNFILE_MODAL.value, 'is_open'),
-    Output(Runfile.SAVE_CLONE_RUNFILE_STATUS.value, 'children'),
-    Output(Runfile.SAVE_CLONE_RUNFILE_STATUS.value, 'style'),
-    [
-        Input(Runfile.CLONE_BTN.value, 'n_clicks'),
-        Input(Runfile.SAVE_CLONE_RUNFILE_BTN.value, 'n_clicks'),
-        Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    ],
-    [
-        State(Runfile.NAME_INPUT.value, 'value'),
-        State(Runfile.CLONE_RUNFILE_MODAL.value, 'is_open'),
-    ],
-    prevent_initial_call=True
-)
-def copy_runfile(clone_clicks, save_clicks, selected_runfile, new_name, modal_is_open):
-    if not ctx.triggered:
-        raise PreventUpdate
-
-    triggered_id = ctx.triggered_id
-    current_runfile = next((value for value in selected_runfile if value), None)
-
-    if not current_runfile:
-        return no_update, no_update, no_update
-
-        # Handle opening the modal
-    if triggered_id == Runfile.CLONE_BTN.value:
-        return True, '', HIDE_STYLE
-
-        # Handle saving the cloned runfile
-    if triggered_id == Runfile.SAVE_CLONE_RUNFILE_BTN.value:
-        if not new_name:
-            return modal_is_open, 'Please enter a new name!', SHOW_STYLE
-
-        new_name_path = os.path.join(Path(current_runfile).parent, f"{current_user.username}.{new_name}")
-
-        if os.path.exists(new_name_path):
-            return modal_is_open, f"Runfile {new_name} already exists!", SHOW_STYLE
-
-        try:
-            shutil.copy(current_runfile, new_name_path)
-            print(f"Runfile {new_name} created successfully!")
-            return False, f'Runfile {new_name} created successfully!', HIDE_STYLE
-        except Exception as e:
-            return modal_is_open, f"Error creating runfile: {str(e)}", SHOW_STYLE
-
-        # If we reach here, it means the runfile selection changed
-    return modal_is_open, '', HIDE_STYLE
-
-# click runfile delete button, show the confirmation alert
-@app.callback(
-    [
-        Output(Runfile.CONFIRM_DEL_ALERT.value, 'displayed'),
-        Output(Runfile.CONFIRM_DEL_ALERT.value, 'message')
-    ],
-    [
-        Input(Runfile.DEL_BTN.value, 'n_clicks'),
-        Input({'type': 'runfile-radio', 'index': ALL}, 'value')
-    ],
-    prevent_initial_call=True
-)
-def runfile_del_display_confirmation(n_clicks, selected_runfile):
-    selected_runfile = [value for value in selected_runfile if value is not None]
-
-    if ctx.triggered_id == Runfile.DEL_BTN.value:
-        if selected_runfile:
-            file_name = selected_runfile[0].split('/')[-1]
-            return True, f'Are you sure you want to delete {file_name}?'
-        else:
-            return False, ''
-    else:
-        return False, ''
 # If selected rows, show the edit button else hide it
 @app.callback(
     Output(Table.OPTION.value, 'style'),
@@ -666,12 +549,14 @@ seq_outputs = [
     prevent_initial_call=True
 )
 def show_edit_layout(n1, selected_rows):
+    print(f"selected_rows: {selected_rows}")
     if not n1:
         raise PreventUpdate
     if not selected_rows:
         return no_update
     selected_row_data = selected_rows[0]
     instrument = selected_row_data.get('_io', '').split('/')[0].upper()
+
     # Determin parameter list based on instrument
     if 'RSR' not in instrument:
         raise PreventUpdate
@@ -695,6 +580,7 @@ def show_edit_layout(n1, selected_rows):
         selected_row_data.get(col, None) for col in cols if col != 'obsnum'
     ]
     values = [obsnum_values] + other_values
+    print(f"values: {values}")
     # Return the values in the correct order
     return values
 
@@ -1028,3 +914,106 @@ def toggle_parameter_help(n_clicks, current_style):
     else:
         # Show the help section
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
+
+# click runfile delete button, show the confirmation alert
+# @app.callback(
+#     [
+#         Output(Runfile.CONFIRM_DEL_ALERT.value, 'displayed'),
+#         Output(Runfile.CONFIRM_DEL_ALERT.value, 'message')
+#     ],
+#     [
+#         Input(Runfile.DEL_BTN.value, 'n_clicks'),
+#         Input({'type': 'runfile-radio', 'index': ALL}, 'value')
+#     ],
+#     prevent_initial_call=True
+# )
+# def runfile_del_display_confirmation(n_clicks, selected_runfile):
+#     selected_runfile = [value for value in selected_runfile if value is not None]
+#
+#     if ctx.triggered_id == Runfile.DEL_BTN.value:
+#         if selected_runfile:
+#             file_name = selected_runfile[0].split('/')[-1]
+#             return True, f'Are you sure you want to delete {file_name}?'
+#         else:
+#             return False, ''
+#     else:
+#         return False, ''
+
+# open a modal if clone-runfile button
+# @app.callback(
+#     Output(Runfile.CLONE_RUNFILE_MODAL.value, 'is_open'),
+#     Output(Runfile.SAVE_CLONE_RUNFILE_STATUS.value, 'children'),
+#     Output(Runfile.SAVE_CLONE_RUNFILE_STATUS.value, 'style'),
+#     [
+#         Input(Runfile.CLONE_BTN.value, 'n_clicks'),
+#         Input(Runfile.SAVE_CLONE_RUNFILE_BTN.value, 'n_clicks'),
+#         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+#     ],
+#     [
+#         State(Runfile.NAME_INPUT.value, 'value'),
+#         State(Runfile.CLONE_RUNFILE_MODAL.value, 'is_open'),
+#     ],
+#     prevent_initial_call=True
+# )
+# def copy_runfile(clone_clicks, save_clicks, selected_runfile, new_name, modal_is_open):
+#     if not ctx.triggered:
+#         raise PreventUpdate
+#
+#     triggered_id = ctx.triggered_id
+#     current_runfile = next((value for value in selected_runfile if value), None)
+#
+#     if not current_runfile:
+#         return no_update, no_update, no_update
+#
+#         # Handle opening the modal
+#     if triggered_id == Runfile.CLONE_BTN.value:
+#         return True, '', HIDE_STYLE
+#
+#         # Handle saving the cloned runfile
+#     if triggered_id == Runfile.SAVE_CLONE_RUNFILE_BTN.value:
+#         if not new_name:
+#             return modal_is_open, 'Please enter a new name!', SHOW_STYLE
+#
+#         new_name_path = os.path.join(Path(current_runfile).parent, f"{current_user.username}.{new_name}")
+#
+#         if os.path.exists(new_name_path):
+#             return modal_is_open, f"Runfile {new_name} already exists!", SHOW_STYLE
+#
+#         try:
+#             shutil.copy(current_runfile, new_name_path)
+#             print(f"Runfile {new_name} created successfully!")
+#             return False, f'Runfile {new_name} created successfully!', HIDE_STYLE
+#         except Exception as e:
+#             return modal_is_open, f"Error creating runfile: {str(e)}", SHOW_STYLE
+#
+#         # If we reach here, it means the runfile selection changed
+#     return modal_is_open, '', HIDE_STYLE
+
+
+# @app.callback(
+#     Output("slurm-job-status-output", "children"),
+#     Input("cancel-job-confirm-dialog", "submit_n_clicks"),
+#     State("job-id-input", "value"),
+#     prevent_initial_call=True,
+# )
+# def cancel_job(n_clicks, job_id):
+#     status, success = pf.cancel_slurm_job(job_id)
+#     if success:
+#         # Display the parsed job status in a table
+#         return html.Div([
+#             dbc.Alert(f"Job {job_id} has been successfully cancelled.", color="success", dismissable=True),
+#             dbc.Table(
+#         [
+#                     html.Thead(html.Tr([html.Th(header) for header in status.keys()])),
+#                     html.Tbody(html.Tr([html.Td(value) for value in status.values()])),
+#                 ],
+#                 bordered=True,
+#                 hover=True,
+#                 responsive=True,
+#                 striped=True,
+#             ),
+#             ],
+#         )
+#     else:
+#         # Show an error or no jobs found message
+#         return dbc.Alert(status, color="danger", dismissable=True)

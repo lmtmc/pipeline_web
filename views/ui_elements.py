@@ -12,7 +12,15 @@ except Exception as e:
     print(f"Error loading configuration: {e}")
 
 prefix = config['path']['prefix']
-
+tooltip_style = {
+        'fontSize': '1.5rem',         # Adjust font size
+        # 'backgroundColor': 'white', # Set background color (e.g., red for danger)
+        # 'color': 'grey',             # Set text color (white for contrast)
+        'borderRadius': '5px',        # Optional: Add rounded corners to the tooltip
+        'padding': '5px 10px',        # Optional: Add some padding inside the tooltip
+        # 'boxShadow': '0px 4px 6px rgba(0, 0, 0, 0.1)', # Optional: Add shadow for depth
+        # 'maxWidth': '200px'           # Optional: Limit the width of the tooltip
+    }
 class Session(Enum):
     NAME_INPUT = 'session-name'
     MESSAGE = 'session-message'
@@ -155,8 +163,8 @@ session_layout = html.Div(
                                className='btn-icon'),
                 ]), width='auto',
         ),
-            dbc.Tooltip("Clone Session", target=Session.NEW_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
-            dbc.Tooltip("Delete Session", target=Session.DEL_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
+            dbc.Tooltip("Clone Session", target=Session.NEW_BTN.value, placement='bottom'),
+            dbc.Tooltip("Delete Session", target=Session.DEL_BTN.value, placement='bottom'),
             ], className='d-flex justify-content-end'),
         html.Div(
             dbc.Accordion(
@@ -167,9 +175,8 @@ session_layout = html.Div(
                 active_item='session-0',
                 style={'overflow': 'auto'}
             ),
-            className='session-list-container',
+            className='session-list-container mb-3',
         ),
-
 
         # Session modal and confirm dialog
         session_modal,
@@ -198,24 +205,33 @@ def create_radio_parameter(col, options, **kwargs):
         [
             dbc.Label(f'{col.split("-")[-1]}:'),
             dcc.RadioItems(id=f'{col}-radio',
-                           options=[{'label': opt, 'value': opt} for opt in options],
+                           options=[{'label': 'N/A', 'value': ''}] + [{'label': opt, 'value': opt} for opt in options],
                            className='mb-3',
-                           inputStyle={"margin-right": "10px"}),
+                           inputStyle={"margin-right": "10px"}
+                           ),
         ]
     )
-def create_input_parameter(col, disabled=False,**kwargs):
-
+def create_input_parameter(col, disabled=False, hidden=False, **kwargs):
     label = col.split("-")[1]
-
     label = f'{"instrument" if label == "_io" else label}:'
+
+    # Define the styles for the input box and label
+    input_style = {"backgroundColor": "#e9ecef"} if disabled else {}
+    if hidden:
+        input_style["display"] = "none"
+
+    label_style = {"display": "none"} if hidden else {}
 
     return html.Div(
         [
-            dbc.Label(label),
-            dcc.Input(id=f'{col}-input',
-                      type='text',
-                      disabled=disabled,
-                      className='mb-3'),
+            dbc.Label(label, style=label_style),  # Conditionally hide the label
+            dcc.Input(
+                id=f'{col}-input',
+                type='text',
+                disabled=disabled,
+                className='mb-3',
+                style=input_style  # Apply style conditionally
+            ),
         ]
     )
 def create_textarea_parameter(col, **kwargs):
@@ -280,8 +296,8 @@ rsr_parameter_configs = [
     {'name': 'blo', 'type': 'input'},
     {'name': 'bandstats', 'type': 'input'},
     {'name': 'srdp', 'type': 'input'},
-    {'name': 'admit', 'type': 'radio', 'options': ['0', '1']},
-    {'name': 'restart', 'type': 'input'},
+    {'name': 'admit', 'type': 'radio', 'options':['0','1']},
+    {'name': 'restart', 'type': 'input', 'disabled': True},
     {'name': 'speczoom', 'type': 'input'},
 ]
 
@@ -294,10 +310,10 @@ sequoia_parameter_configs = [
     {'name': 'dv', 'type': 'input'},
     {'name': 'dw', 'type': 'input'},
     {'name': 'extent', 'type': 'input'},
-    {'name': 'restart', 'type': 'input'},
+    {'name': 'restart', 'type': 'input','disabled': True},
     {'name': 'birdies', 'type': 'input'},
-    {'name': 'public', 'type': 'input'},
-    {'name': 'qagrade', 'type': 'input'},
+    {'name': 'public', 'type': 'input','disabled': True,'hidden': True},
+    {'name': 'qagrade', 'type': 'input', 'disabled': True,'hidden': True},
 ]
 
 rsr_cols = [f"rsr-{config['name']}" for config in rsr_parameter_configs]
@@ -364,15 +380,17 @@ def create_parameter_layout_modal(instrument,row_length,configs):
 
     return dbc.Modal(
     [
-        dbc.ModalHeader(dbc.Row([
-            dbc.Col(html.H5('EDIT PARAMETERS'),width='auto'),
-            dbc.Col(dbc.Button('Parameter Info', id='para-help-btn', color='secondary'))],className='d-flex align-items-center'),
+        dbc.ModalHeader(
+            [
+                dbc.Row([
+                    dbc.Col(html.H5('EDIT PARAMETERS'),width='auto'),
+                    dbc.Col(dbc.Button('Parameter Help', id='para-help-btn',))],className='d-flex align-items-center'),
+        ]
         ),
         dbc.ModalBody(
             html.Div([
+                html.Div(id=f'{instrument}-parameter-help', style={'display': 'none'}),
                 create_instrument_parameter_layout(instrument, row_length, configs),
-
-                html.Div(id=f'{instrument}-parameter-help',style={'display':'none'}),
                 # dbc.Offcanvas(id='parameter-help-offcanvas', is_open=False, children=[]),
               ],id='layouts'),),
     ],id='parameter-edit-modal',
@@ -383,123 +401,144 @@ def create_parameter_layout_modal(instrument,row_length,configs):
     )
 
 runfile_layout = html.Div([
+    dbc.Card([
+        dbc.CardHeader(
+            dbc.Row([
+                dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value),className='text-center my-2',width='auto'),
+                dbc.Col(
+                    dbc.ButtonGroup([
+                        dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
+                                   style={'margin-right': '5px'}),
+                        dbc.Button("Check Status", id="check-status-btn", color='secondary',
+                                   style={'margin-right': '5px'}),
+                        dbc.Button("View Result", id='view-result-link', color='success', className='btn btn-success')
 
-    dbc.Card(
-        [
-            dbc.CardHeader(
-                dbc.Row(
-                    [
-                        dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value), className='text-center my-2', width='auto'),
-                        dbc.Col(
-                            dbc.ButtonGroup([
-                                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value, outline=True,
-                                           className='btn-icon', color='secondary'),
-                                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True,
-                                           className='btn-icon', color='secondary'),
-                            ],
-                                # size='lg',
-                            ),
-                            width='auto', className='d-flex justify-content-center align-items-center'),
-                    ], className='align-items-center'
-                )
-            ),
-            dbc.CardBody(
-                [
-                    html.Div([
-                       dbc.Row([
-                           dbc.Col([
-                               dbc.ButtonGroup([
-                                   dbc.Button('Edit Row', id=Table.EDIT_BTN.value, color='primary', className='me-2'),
-                                   dbc.Button('Delete Row', id=Table.DEL_ROW_BTN.value, color='danger', className='me-2'),
-                                   dbc.Button('Clone Row', id=Table.CLONE_ROW_BTN.value, color='success')
-                               ])
-                           ], width='auto')
-                       ], className='gx-2 py-2 bg-light rounded shadow-sm'),
-                    ], id=Table.OPTION.value,
-                      style={
-                          'display': 'none',
-                          'position': 'absolute',
-                          'right': '20px',
-                          'zIndex': 1000
-                      }),
+                    ], size='md'), width='auto', className='ml-auto'
+                ),
+                dcc.Location(id='result-location', refresh=True),
+            ], className='d-flex justify-content-between')
+        ),
+        dbc.CardBody([
+            # ButtonGroup in the same row, right next to the label
+            dbc.Row([
+                dbc.Col(
                     html.Div(
-                        [
-                            dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
-                            AgGrid(
-                                id='runfile-table',
-                                rowData=[],
-                                defaultColDef={
-                                    "filter": True,
-                                    "checkboxSelection": {
-                                        "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
-                                    },
-                                    "headerCheckboxSelection": {
-                                        "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
-                                    }
-                                },
-                                dashGridOptions={
-                                    "rowSelection": "multiple",
-                                    "rowMultiSelectWithClick": True,
-                                    "suppressRowClickSelection": True,
-                                    'enableBrowserTooltips': True,
-                                },
-
-                                className="ag-theme-alpine",
-                            ),
+                        dbc.ButtonGroup([
+                            dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True,
+                                       color='secondary', className='btn-icon'),
+                            dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True,
+                                       color='secondary', className='btn-icon'),
+                            dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True,
+                                       color='secondary', className='btn-icon')
                         ]),
-
-                    dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
-
-                ],
+                        id=Table.OPTION.value
+                    ),
+                    width='auto',
+                    className='d-flex justify-content-start'
+                ),
+            dbc.Tooltip("Edit Row(s)", target=Table.EDIT_BTN.value, placement='bottom'),
+            dbc.Tooltip("Delete Row(s)", target=Table.DEL_ROW_BTN.value, placement='bottom'),
+            dbc.Tooltip("Clone Row(s)", target=Table.CLONE_ROW_BTN.value, placement='bottom')
+            ]),
+            html.Div([
+                dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
+                AgGrid(
+                    id='runfile-table',
+                    rowData=[],
+                    defaultColDef={
+                        "filter": True,
+                        "checkboxSelection": {
+                            "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                        },
+                        "headerCheckboxSelection": {
+                            "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                        }
+                    },
+                    dashGridOptions={
+                        # "domLayout": "autoHeight",  # Automatically adjusts the height of the grid to its content
+                        "rowSelection": "multiple",
+                        "rowMultiSelectWithClick": True,
+                        "suppressRowClickSelection": True,
+                        'enableBrowserTooltips': True
+                    },
+                    className="ag-theme-alpine",
+                    style={'height': '45vh'}
+                )
+            ]),
+            dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
+            dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message='')
+    ]),
+], className='mb-3'),
+        dbc.Modal([
+            dbc.ModalHeader(
+                dbc.ModalTitle("Submit Job to UNITY", className="text-primary"),
+                close_button=True
             ),
-            clone_runfile_modal,
-            dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
-
-            dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
-            dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom',style={'fontSize': '1.2rem'} ),
-        ], ),
-
-],
-
-    id=Runfile.CONTENT_DISPLAY.value,
-    className='runfile-content-container'
-)
-
-submit_job_layout = html.Div(
-    [
-        dbc.Card(
-            [
-                dbc.CardHeader(id='submit-session-job-label',className='title-link',),
-                #todo select multi runfile
-                dbc.CardBody(
-                    [
+            dbc.ModalBody([
+                html.Div([
+                    html.H5(className="mb-3 text-dark", id="submit-job-confirm-text"),
+                    dbc.Form([
                         dbc.Row([
                             dbc.Col([
-                                dbc.Label('Select Runfiles'),
-                                dcc.Dropdown(id = Session.RUNFILE_SELECT.value, placeholder='Select Runfiles', style={'width':'100%'}),
-                            ],width=2),
-                            dbc.Col([
-                                dbc.Label('Input email address for notification'),
-                                dbc.Input(id='email-input', placeholder='Enter email address', type='email', style={'width':'100%'}),
-                            ],width=2),
-                            dbc.Col(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, disabled=True,className="w-100"), width='auto'),
-                            dbc.Col(dbc.Button("Check Status", id="check-status-btn", color="primary", className="w-100"),
-                                    width='auto', ),
-                        ], align='end',
-                        ),
-                        html.Div(id="slurm-job-status-output", className="mt-4")
-                    ]),
+                                dbc.Label(
+                                    "Email Notification",
+                                    className="text-muted mb-2"
+                                ),
+                                dbc.Input(
+                                    id='email-input',
+                                    placeholder='your.email@example.com',
+                                    type='email',
+                                    className="mb-3",
+                                ),
+                                dbc.FormText(
+                                    "You'll receive updates about your job status at this email address",
+                                    color="secondary"
+                                )
+                            ])
+                        ])
+                    ])
+                ]),
+            html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
+            ],
 
-            ], style={'maxHeight': '500px'}
-                # className='justify-content-between align-items-end',
             ),
-        html.Div(id=Session.SUBMIT_JOB.value,className='submit-job-message'),
+            dbc.ModalFooter([
+                dbc.Button(
+                    "Cancel",
+                    id="cancel-submit-job",
+                    color="secondary",
+                    className="me-2"
+                ),
+                dbc.Button(
+                    [
+                        html.I(className="fas fa-paper-plane me-2"),
+                        "Submit Job"
+                    ],
+                    id='confirm-submit-job-btn',
+                    color='primary'
+                ),
+            ])
+        ],
+        id='confirm-submit-job',
+        is_open=False,
+        size="md",
+        backdrop="static",
+        centered=True
+        )
+        ],
+    id=Runfile.CONTENT_DISPLAY.value,
+    className='runfile-content-container')
+
+job_status_layout = html.Div(
+    [
+
+        html.Div(id="slurm-job-status-output", className="mt-4")
 ],)
 
 def create_parameter_help(instrument):
     if instrument == 'rsr':
-        return html.P([
-            html.H5("PI Parameters:"),
+        return html.Div(html.P([
+            # html.H5("PI Parameters:"),
             html.Ul([
                 html.Li("xlines: Set to a comma-separated list of freq, dfreq pairs where strong lines are to avoid baseline fitting."),
                 html.Li("badcb: Set to a comma-separated list of (chassis/board) combinations, e.g., badcb=2/3,3/5. See also 'jitter'."),
@@ -517,6 +556,6 @@ def create_parameter_help(instrument):
                 html.Li("blo: Order of polynomial baseline subtraction. Default is 1."),
                 html.Li("bandstats: Also compute stats of each of the 6 RSR bands. Default is 0."),
             ])
-        ])
+        ]),style={'fontSize': '1.5rem', 'max-height': '200px', 'overflow-y': 'auto'})
     else:
         return html.P("No help available for the selected instrument.")

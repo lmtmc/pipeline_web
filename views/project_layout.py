@@ -198,7 +198,7 @@ def submit_job(n_clicks,selected_runfile, session,email):
     confirmation_message = (f"Job for runfile '{runfile}' has been submitted. ")
 
     # step 2: Submit the job
-    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, session,email)).start()
+    Thread(target=pf.process_job_submission, args=(current_user.username, runfile, session,email)).start()
     return dbc.Label(confirmation_message, color="success", className="mt-2")
 
 @app.callback(

@@ -353,7 +353,7 @@ def parameter_layout_multi_row(instrument,parameter_configs):
                         id=f'{instrument}-multi-edit-dropdown',
                         options=[
                             {'label': config['name'], 'value': config['name']}
-                            for config in parameter_configs if config['name'] not in ['obsnum', '_s','_io']
+                            for config in parameter_configs if config['name'] not in ['obsnum', '_s','_io','restart','public','qagrade']
                         ],
                     ),
                     width='auto',
@@ -416,7 +416,7 @@ runfile_layout = html.Div([
                     ], size='md'), width='auto', className='ml-auto'
                 ),
                 dcc.Location(id='result-location', refresh=True),
-            ], className='d-flex justify-content-between')
+            ], className='d-flex align-items-center justify-content-between')
         ),
         dbc.CardBody([
             # ButtonGroup in the same row, right next to the label

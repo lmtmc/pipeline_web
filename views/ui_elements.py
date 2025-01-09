@@ -404,19 +404,24 @@ runfile_layout = html.Div([
     dbc.Card([
         dbc.CardHeader(
             dbc.Row([
-                dbc.Col(dbc.Label(id=Runfile.CONTENT_TITLE.value),className='text-center my-2',width='auto'),
+                dbc.Col(
+                    dbc.Label(id=Runfile.CONTENT_TITLE.value),
+                    className='d-flex align-items-center',  # Center vertically
+                    width=9
+                ),
                 dbc.Col(
                     dbc.ButtonGroup([
                         dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
-                                   style={'margin-right': '5px'}),
+                                   className='me-2'),  # Using me-2 instead of margin-right
                         dbc.Button("Check Status", id="check-status-btn", color='secondary',
-                                   style={'margin-right': '5px'}),
-                        dbc.Button("View Result", id='view-result-link', color='success', className='btn btn-success')
-
-                    ], size='md'), width='auto', className='ml-auto'
+                                   className='me-2'),
+                        dbc.Button("View Result", id='view-result-link', color='success')
+                    ], size='md'),
+                    className='d-flex justify-content-end',  # Align buttons to the right
+                    width='auto'
                 ),
                 dcc.Location(id='result-location', refresh=True),
-            ], className='d-flex align-items-center justify-content-between')
+            ], className='d-flex justify-content-between align-items-center')
         ),
         dbc.CardBody([
             # ButtonGroup in the same row, right next to the label

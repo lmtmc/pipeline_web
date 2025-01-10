@@ -151,17 +151,17 @@ def display_confirmation(n_clicks, active_item):
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
 # if Session-0 is clicked, not shown sumbit job and check status button
-@app.callback(
-    [
-        Output('runfile-run-btn', 'style'),
-        Output('runfile-check-status-btn', 'style'),
-    ],
-    Input(Session.SESSION_LIST.value, 'active_item'),
-)
-def show_runfile_buttons(active_session):
-    if active_session == init_session:
-        return HIDE_STYLE, HIDE_STYLE
-    return SHOW_STYLE, SHOW_STYLE
+# @app.callback(
+#     [
+#         Output('runfile-run-btn', 'style'),
+#         Output('runfile-check-status-btn', 'style'),
+#     ],
+#     Input(Session.SESSION_LIST.value, 'active_item'),
+# )
+# def show_runfile_buttons(active_session):
+#     if active_session == init_session:
+#         return HIDE_STYLE, HIDE_STYLE
+#     return SHOW_STYLE, SHOW_STYLE
 
 # if click the view result button go to the url to view the result
 @app.callback(
@@ -932,19 +932,19 @@ def toggle_parameter_help(n_clicks, current_style):
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
 
 # if there is job running disable the sumbit job button
-# @app.callback(
-#     Output(Runfile.RUN_BTN.value, 'disabled'),
-#     Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-#     prevent_initial_call=True
-# )
-# def disable_submit_job_button(selected_runfile):
-#     selected_runfile = next((value for value in selected_runfile if value), None)
-#     status, finished = pf.check_runfile_job_status(selected_runfile)
-#     print(f"status: {status}, finished: {finished}")
-#     # if the job is running, disable the submit job button
-#     if not finished:
-#         return False
-#     return True
+@app.callback(
+    Output(Runfile.RUN_BTN.value, 'disabled'),
+    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def disable_submit_job_button(selected_runfile):
+    selected_runfile = next((value for value in selected_runfile if value), None)
+    status, finished = pf.check_runfile_job_status(selected_runfile)
+    print(f"status: {status}, finished: {finished}")
+    # if the job is running, disable the submit job button
+    if not finished:
+        return False
+    return True
 
 
 # click runfile delete button, show the confirmation alert

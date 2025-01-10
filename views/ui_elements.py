@@ -193,38 +193,44 @@ def create_dropdown_parameter(col,multi=False,**kwargs):
     label = f'{"source" if label == "_s" else label}:'
     return html.Div(
         [
-            dbc.Label(label),
+            dbc.Label(label,id=f'{col}-label'),
             dcc.Dropdown(id=f'{col}-dropdown',
                          className='mb-3',
                          options=[],
                          multi=multi,),
+
         ]
     )
-def create_radio_parameter(col, options, **kwargs):
+def create_radio_parameter(col, options, tooltip=None,**kwargs):
     return html.Div(
         [
-            dbc.Label(f'{col.split("-")[-1]}:'),
+            dbc.Label(f'{col.split("-")[-1]}:', id=f'{col}-label'),
             dcc.RadioItems(id=f'{col}-radio',
                            options=[{'label': 'N/A', 'value': ''}] + [{'label': opt, 'value': opt} for opt in options],
                            className='mb-3',
                            inputStyle={"margin-right": "10px"}
                            ),
+            dbc.Tooltip(tooltip, target=f'{col}-label') if tooltip else None
         ]
     )
 def create_input_parameter(col, disabled=False, hidden=False, **kwargs):
     label = col.split("-")[1]
     label = f'{"instrument" if label == "_io" else label}:'
 
-    # Define the styles for the input box and label
+    # Define the styles for the input box, label, and container
     input_style = {"backgroundColor": "#e9ecef"} if disabled else {}
-    if hidden:
-        input_style["display"] = "none"
+    label_style = {}
+    container_style = {}
 
-    label_style = {"display": "none"} if hidden else {}
+    if hidden:
+        # Hide both input, label, and container when hidden=True
+        input_style["display"] = "none"
+        label_style["display"] = "none"
+        container_style["display"] = "none"
 
     return html.Div(
         [
-            dbc.Label(label, style=label_style),  # Conditionally hide the label
+            dbc.Label(label, style=label_style, id=f'{col}-label'),  # Conditionally hide the label
             dcc.Input(
                 id=f'{col}-input',
                 type='text',
@@ -232,15 +238,10 @@ def create_input_parameter(col, disabled=False, hidden=False, **kwargs):
                 className='mb-3',
                 style=input_style  # Apply style conditionally
             ),
-        ]
+        ],
+        style=container_style  # Apply container style conditionally
     )
-def create_textarea_parameter(col, **kwargs):
-    return html.Div(
-        [
-            dbc.Label(f'{col.split("-")[-1]}:'),
-            dcc.Textarea(id=f'{col}-textarea', placeholder=f'Enter {col}', className='mb-3'),
-        ]
-    )
+
 def create_checkbox_parameter(col, options,**kwargs):
     return html.Div(
         [
@@ -252,14 +253,6 @@ def create_checkbox_parameter(col, options,**kwargs):
         ],
     )
 
-def create_label(col, **kwargs):
-
-    return html.Div(
-        [
-            dbc.Label(f'{col.split("-")[-1]}:'),
-            html.Div(id=f'{col}-label', className='mb-3'),
-        ]
-    )
 # Helper function to dynamically create parameter components
 # Centralized function to create parameter components based on type
 def create_parameter_component(param_name, param_type, **kwargs):
@@ -267,28 +260,63 @@ def create_parameter_component(param_name, param_type, **kwargs):
         'dropdown': create_dropdown_parameter,
         'input': create_input_parameter,
         'radio': create_radio_parameter,
-        'textarea': create_textarea_parameter,
         'checkbox': create_checkbox_parameter,
-        'label': create_label,
     }
 
+    # Check if the parameter type exists in the component_map
     if param_type in component_map:
+        # Pass the 'hidden' attribute (along with other kwargs) to the component function
         return dbc.Col(component_map[param_type](param_name, **kwargs), width=kwargs.get('width', 'auto'))
     return None
 
-# Configuration for each parameter
-rsr_parameter_configs = [
+
+# Common configurations for all parameters
+url = "https://raw.githubusercontent.com/astroumd/lmtoy/master/docs/parameters.txt"
+parameters = pf.get_parameter_info(url)
+rsr_parameters = parameters['RSR/BS']
+sequoia_parameters = parameters['SEQ/MAP']
+# Initialize an empty list to hold the Tooltip components
+rsr_tooltips, sequoia_tooltips = [], []
+# Iterate over all columns in rsr_parameters
+for param_name, param_value in rsr_parameters.items():
+    # Only create a tooltip if the parameter has a value (i.e., tooltip exists)
+    if param_value:  # You can also add a condition like `if param_value.strip() != ''`
+        tooltip_id = f'rsr-{param_name}-label'  # ID for the label
+        rsr_tooltips.append(
+            dbc.Tooltip(param_value, target=tooltip_id, style=tooltip_style, placement='bottom')
+        )
+for param_name, param_value in sequoia_parameters.items():
+    # Only create a tooltip if the parameter has a value (i.e., tooltip exists)
+    if param_value:  # You can also add a condition like `if param_value.strip() != ''`
+        tooltip_id = f'seq-{param_name}-label'  # ID for the label
+        sequoia_tooltips.append(
+            dbc.Tooltip(param_value, target=tooltip_id, style=tooltip_style, placement='bottom')
+        )
+# Wrap the tooltips in a html.Div and store in rsr_parameter_tooltips
+rsr_parameter_tooltips = html.Div(rsr_tooltips)
+sequoia_parameter_tooltips = html.Div(sequoia_tooltips)
+
+# Initialize an empty list to hold the Tooltip components
+tooltips = []
+
+# Common configurations for all parameters
+common_configs = [
     {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
     {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
-    {'name': '_io', 'type': 'input', 'disabled': True},
+    {'name': '_io', 'type': 'input', 'disabled': True}
+]
+
+# Configuration for each parameter
+rsr_parameter_configs = common_configs + [
     {'name': 'xlines', 'type': 'input'},
     {'name': 'badcb', 'type': 'input'},
     {'name': 'jitter', 'type': 'input'},
     {'name': 'badlags', 'type': 'input'},
-    {'name': 'shortlags2', 'type': 'input'},
+    {'name': 'shortlags', 'type': 'input'},
     {'name': 'spike', 'type': 'input'},
     {'name': 'linecheck', 'type': 'input'},
     {'name': 'bandzoom', 'type': 'input'},
+    {'name': 'speczoom', 'type': 'input'},
     {'name': 'rthr', 'type': 'input'},
     {'name': 'cthr', 'type': 'input'},
     {'name': 'sgf', 'type': 'input'},
@@ -298,13 +326,9 @@ rsr_parameter_configs = [
     {'name': 'srdp', 'type': 'input'},
     {'name': 'admit', 'type': 'radio', 'options':['0','1']},
     {'name': 'restart', 'type': 'input', 'disabled': True},
-    {'name': 'speczoom', 'type': 'input'},
 ]
 
-sequoia_parameter_configs = [
-    {'name': 'obsnum', 'type': 'dropdown', 'multi': True, 'width': 2},
-    {'name': '_s', 'type': 'dropdown', 'multi': False, 'width': 2},
-    {'name': '_io', 'type': 'input','disabled':True},
+sequoia_parameter_configs = common_configs + [
     {'name': 'pix_list', 'type': 'checkbox',
      'options':[{'label': str(i), 'value': str(i)} for i in range(16)],'value':[],'width': 2},
     {'name': 'dv', 'type': 'input'},
@@ -391,7 +415,8 @@ def create_parameter_layout_modal(instrument,row_length,configs):
             html.Div([
                 html.Div(id=f'{instrument}-parameter-help', style={'display': 'none'}),
                 create_instrument_parameter_layout(instrument, row_length, configs),
-                # dbc.Offcanvas(id='parameter-help-offcanvas', is_open=False, children=[]),
+                rsr_parameter_tooltips,
+                sequoia_parameter_tooltips,
               ],id='layouts'),),
     ],id='parameter-edit-modal',
         size='xl',
@@ -452,6 +477,9 @@ runfile_layout = html.Div([
                     rowData=[],
                     defaultColDef={
                         "filter": True,
+                        "resizable": True,
+                        "sortable": True,
+                        "autoSize": True,
                         "checkboxSelection": {
                             "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
                         },
@@ -464,14 +492,19 @@ runfile_layout = html.Div([
                         "rowSelection": "multiple",
                         "rowMultiSelectWithClick": True,
                         "suppressRowClickSelection": True,
-                        'enableBrowserTooltips': True
+                        'enableBrowserTooltips': True,
+                        'skipHeaderOnAutoSize': False,  # Include headers when auto-sizing
+                        'autoSizeOnLoad': True,  # Auto-size when data is loaded
+
                     },
+
                     className="ag-theme-alpine",
                     style={'height': '45vh'}
                 )
             ]),
             dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
-            dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message='')
+            dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
+
     ]),
 ], className='mb-3'),
         dbc.Modal([
@@ -542,25 +575,42 @@ job_status_layout = html.Div(
 
 def create_parameter_help(instrument):
     if instrument == 'rsr':
-        return html.Div(html.P([
-            # html.H5("PI Parameters:"),
-            html.Ul([
-                html.Li("xlines: Set to a comma-separated list of freq, dfreq pairs where strong lines are to avoid baseline fitting."),
-                html.Li("badcb: Set to a comma-separated list of (chassis/board) combinations, e.g., badcb=2/3,3/5. See also 'jitter'."),
-                html.Li("jitter: Jittering Tsys and BadLags. Use badcb's based on jitter. Default is 1."),
-                html.Li("badlags: Set to a badlags file if to use this instead of dynamically generated. Use 0 to force not to use it (not used yet)."),
-                html.Li("shortlags: Set to a short_min and short_hi to avoid flagged strong continuum source lags, e.g., shortlags=32,10.0."),
-                html.Li("spike: Spikiness of bad lags that need to be flagged. Default is 3."),
-                html.Li("linecheck: Set to 1 to use the source name to grab the correct xlines. Default is 0."),
-                html.Li("bandzoom: The band for the zoomed window (0..5). Default is 5."),
-                html.Li("speczoom: Override bandzoom with a manual speczoom=CENTER,HALF_WIDTH pair."),
-                html.Li("rthr: Threshold sigma value when averaging single observation repeats (-r option for rsr_driver). Default is 0.01."),
-                html.Li("cthr: Threshold sigma value when coadding all observations (-t option for rsr_driver and rsr_sum). Default is 0.01."),
-                html.Li("sgf: Savitzky-Golay high pass filter; odd number > 21. Default is 0."),
-                html.Li("notch: Sigma cut for notch filter to eliminate large frequency oscillations. Needs sgf > 21. Default is 0."),
-                html.Li("blo: Order of polynomial baseline subtraction. Default is 1."),
-                html.Li("bandstats: Also compute stats of each of the 6 RSR bands. Default is 0."),
-            ])
-        ]),style={'fontSize': '1.5rem', 'max-height': '200px', 'overflow-y': 'auto'})
+        # Create a list to hold all the help documentation entries
+        help_entries = []
+
+        # Iterate over the rsr_parameters and create list items dynamically
+        for param_name, param_description in rsr_parameters.items():
+            # If there is a description for the parameter (not empty or None)
+            if param_description:
+                help_entries.append(html.Li(f"{param_name}: {param_description}"))
+            else:
+                help_entries.append(html.Li(f"{param_name}: No description available."))
+
+        # Return the help section with dynamically generated list items
+        return html.Div(
+            html.P([
+                html.Ul(help_entries)
+            ]),
+            style={'fontSize': '1.5rem', 'max-height': '200px', 'overflow-y': 'auto'}
+        )
+    elif instrument == 'seq':
+        # Create a list to hold all the help documentation entries
+        help_entries = []
+
+        # Iterate over the sequoia_parameters and create list items dynamically
+        for param_name, param_description in sequoia_parameters.items():
+            # If there is a description for the parameter (not empty or None)
+            if param_description:
+                help_entries.append(html.Li(f"{param_name}: {param_description}"))
+            else:
+                help_entries.append(html.Li(f"{param_name}: No description available."))
+
+        # Return the help section with dynamically generated list items
+        return html.Div(
+            html.P([
+                html.Ul(help_entries)
+            ]),
+            style={'fontSize': '1.5rem', 'max-height': '200px', 'overflow-y': 'auto'}
+        )
     else:
         return html.P("No help available for the selected instrument.")

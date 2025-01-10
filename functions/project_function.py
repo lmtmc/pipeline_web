@@ -14,6 +14,7 @@ import pandas as pd
 from config_loader import load_config
 import smtplib
 from email.message import EmailMessage
+import requests
 
 try :
     config = load_config()
@@ -680,3 +681,34 @@ def process_job_submission(pid,runfile, session,email):
 def generate_result_url(pid, session_name):
     # return http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/2023-S1-US-17/Session-1/2023-S1-US-17/README.html
     return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/{pid}/README.html"
+
+def get_parameter_info(url):
+    if not url:
+        return "No URL provided", False
+
+    # step1: Read the parameters.txt from GitHub
+    response = requests.get(url)
+    if response.status_code != 200:
+        return f"Error: {response.status_code}", False
+    parameters_content = response.text
+
+    # step2: Parse the parameters.txt content
+    parameters = {}
+    lines = parameters_content.split("\n")
+    current_section = None
+
+    for line in lines:
+        if line.startswith("="):
+            # New section
+            current_section = line.strip().replace("=", "")
+            parameters[current_section] = {}
+        elif current_section and ":" in line:
+            # Parameter line within a section
+            param_name, param_desc = line.split(":", 1)
+            parameters[current_section][param_name.strip()] = param_desc.strip()
+
+    return parameters
+
+# parameters = get_parameter_info(url)
+# rsr_parameters = parameters['RSR/BS']
+# sequoia_parameters = parameters['SEQ/MAP']

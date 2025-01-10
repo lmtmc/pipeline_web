@@ -1,9 +1,8 @@
-#TODO for PID 8 not shown the public and qagrade inputbox in the table and parameter edit layout, but keep the value in the runfile
-#TODO get the parameter help from the lmtoy code
-#TODO submit job using the spatch_session.sh
+#TODO submit job using the spatch_session_one.sh
 #TODO monitor the slurm job status. When all finished make summary and send email to the user
 #TODO test the link of the view result button
-
+#TODO handle the error when lmtoy folder not found for a session
+#TODO add make summary 
 import logging
 import os
 from threading import Thread
@@ -299,6 +298,7 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
             'field': c,
             'filter': True,
             'sortable': True,
+            "autoSize": True,
             'headerTooltip': f'{c} column',
         } for c in runfile_data.columns
     ]
@@ -691,6 +691,7 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
             'field': col,
             'filter': True,
             'sortable': True,
+            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -777,6 +778,7 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
             'field': col,
             'filter': True,
             'sortable': True,
+            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -831,6 +833,7 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'field': col,
             'filter': True,
             'sortable': True,
+            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -881,6 +884,7 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'field': col,
             'filter': True,
             'sortable': True,
+            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -926,6 +930,22 @@ def toggle_parameter_help(n_clicks, current_style):
     else:
         # Show the help section
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
+
+# if there is job running disable the sumbit job button
+@app.callback(
+    Output(Runfile.RUN_BTN.value, 'disabled'),
+    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def disable_submit_job_button(selected_runfile):
+    selected_runfile = next((value for value in selected_runfile if value), None)
+    status, finished = pf.check_runfile_job_status(selected_runfile)
+    print(f"status: {status}, finished: {finished}")
+    # if the job is running, disable the submit job button
+    if not finished:
+        return False
+    return True
+
 
 # click runfile delete button, show the confirmation alert
 # @app.callback(

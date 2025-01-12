@@ -221,7 +221,7 @@ def save_runfile(df, runfile_path):
             if value is not None and str(value).strip() != '' and column != 'index':
                 if isinstance(value, list):
                     value = ','.join(map(str, value))
-                if column == 'obsnum(s)':
+                if column == 'obsnum':
                     if ',' in value:
                         column = 'obsnums'
                     else:

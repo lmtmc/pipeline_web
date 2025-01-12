@@ -683,7 +683,7 @@ def generate_result_url(pid, session_name):
     if session_name == init_session:
         return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/README.html"
     else:
-        return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/README.html"
+        return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/{pid}/README.html"
 
 def get_parameter_info(url):
     if not url:

@@ -17,6 +17,7 @@ from functions import project_function as pf
 from views import ui_elements as ui
 from views.ui_elements import Session, Runfile, Table
 from config_loader import load_config
+import math
 
 try :
     config = load_config()
@@ -150,18 +151,51 @@ def display_confirmation(n_clicks, active_item):
     if ctx.triggered_id == Session.DEL_BTN.value and active_item:
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
-# if Session-0 is clicked, not shown sumbit job and check status button
-# @app.callback(
-#     [
-#         Output('runfile-run-btn', 'style'),
-#         Output('runfile-check-status-btn', 'style'),
-#     ],
-#     Input(Session.SESSION_LIST.value, 'active_item'),
-# )
-# def show_runfile_buttons(active_session):
-#     if active_session == init_session:
-#         return HIDE_STYLE, HIDE_STYLE
-#     return SHOW_STYLE, SHOW_STYLE
+# if Session-0 is clicked, not shown sumbit job and check status button, runfile table not selectable
+@app.callback(
+    [
+        Output('runfile-run-btn', 'style'),
+        Output('runfile-check-status-btn', 'style'),
+        Output('runfile-table', 'dashGridOptions'),
+        Output('runfile-table', 'defaultColDef'),
+    ],
+    Input(Session.SESSION_LIST.value, 'active_item'),
+)
+def show_runfile_buttons(active_session):
+    if active_session == init_session:
+        dashGridOptions = {
+            "rowSelection": None,  # No row selection allowed
+            "suppressRowClickSelection": True,
+            'enableBrowserTooltips': True,
+            'skipHeaderOnAutoSize': False,
+        }
+        defaultColDef = {
+            "filter": True,
+            "resizable": True,
+            "sortable": True,
+        }
+        return HIDE_STYLE, HIDE_STYLE, dashGridOptions, defaultColDef
+    else:
+        # Enable selection and show checkboxes
+        dashGridOptions = {
+            "rowSelection": "multiple",
+            "rowMultiSelectWithClick": True,
+            "suppressRowClickSelection": False,
+            'enableBrowserTooltips': True,
+            'skipHeaderOnAutoSize': False,
+        }
+        defaultColDef = {
+            "filter": True,
+            "resizable": True,
+            "sortable": True,
+            "checkboxSelection": {
+                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+            },
+            "headerCheckboxSelection": {
+                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+            },
+        }
+    return SHOW_STYLE, SHOW_STYLE, dashGridOptions, defaultColDef
 
 # if click the view result button go to the url to view the result
 @app.callback(
@@ -200,7 +234,6 @@ def show_confirm_submit(n_clicks, cancel_clicks):
     prevent_initial_call=True
 )
 def submit_job(n_clicks,selected_runfile, session,email):
-    print(f"selected_runfile: {selected_runfile}")
     selected_runfile = next((value for value in selected_runfile if value), None)
     runfile = os.path.basename(selected_runfile)
     if not email:
@@ -298,15 +331,22 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
             'field': c,
             'filter': True,
             'sortable': True,
-            "autoSize": True,
             'headerTooltip': f'{c} column',
         } for c in runfile_data.columns
     ]
 
+
+    # Replace NaN values in the data
+    cleaned_row_data = []
+    for row in row_data:
+        cleaned_row = {key: (None if isinstance(value, float) and math.isnan(value) else value) for key, value in
+                       row.items()}
+        cleaned_row_data.append(cleaned_row)
+
     if ctx.triggered_id == Runfile.CONFIRM_DEL_ALERT.value:
         pf.del_runfile(current_runfile)
     data_store['selected_runfile'] = current_runfile
-    return runfile_title,SHOW_STYLE, row_data, column_defs,data_store, f"Are you sure to Submit {runfile_title}?"
+    return runfile_title,SHOW_STYLE, cleaned_row_data, column_defs,data_store, f"Are you sure to Submit {runfile_title}?"
 
 # If selected rows, show the edit button else hide it
 @app.callback(
@@ -561,7 +601,6 @@ seq_outputs = [
     prevent_initial_call=True
 )
 def show_edit_layout(n1, selected_rows):
-    print(f"selected_rows: {selected_rows}")
     if not n1:
         raise PreventUpdate
     if not selected_rows:
@@ -592,7 +631,6 @@ def show_edit_layout(n1, selected_rows):
         selected_row_data.get(col, None) for col in cols if col != 'obsnum'
     ]
     values = [obsnum_values] + other_values
-    print(f"values: {values}")
     # Return the values in the correct order
     return values
 
@@ -691,7 +729,6 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
             'field': col,
             'filter': True,
             'sortable': True,
-            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -778,7 +815,6 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
             'field': col,
             'filter': True,
             'sortable': True,
-            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -833,7 +869,6 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'field': col,
             'filter': True,
             'sortable': True,
-            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -884,7 +919,6 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'field': col,
             'filter': True,
             'sortable': True,
-            'autoSize': True,
             'headerTooltip': f'{col} column',
         }
         for col in columns_with_values
@@ -932,19 +966,19 @@ def toggle_parameter_help(n_clicks, current_style):
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
 
 # if there is job running disable the sumbit job button
-@app.callback(
-    Output(Runfile.RUN_BTN.value, 'disabled'),
-    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    prevent_initial_call=True
-)
-def disable_submit_job_button(selected_runfile):
-    selected_runfile = next((value for value in selected_runfile if value), None)
-    status, finished = pf.check_runfile_job_status(selected_runfile)
-    print(f"status: {status}, finished: {finished}")
-    # if the job is running, disable the submit job button
-    if not finished:
-        return False
-    return True
+# TODO disable this function for now
+# @app.callback(
+#     Output(Runfile.RUN_BTN.value, 'disabled'),
+#     Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+#     prevent_initial_call=True
+# )
+# def disable_submit_job_button(selected_runfile):
+#     selected_runfile = next((value for value in selected_runfile if value), None)
+#     status, finished = pf.check_runfile_job_status(selected_runfile)
+#     # if the job is running, disable the submit job button
+#     if not finished:
+#         return False
+#     return True
 
 
 # click runfile delete button, show the confirmation alert

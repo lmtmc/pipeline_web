@@ -454,14 +454,17 @@ runfile_layout = html.Div([
                 dbc.Col(
                     html.Div(
                         dbc.ButtonGroup([
-                            dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True,
-                                       color='secondary', className='btn-icon'),
-                            dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True,
-                                       color='secondary', className='btn-icon'),
-                            dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True,
-                                       color='secondary', className='btn-icon')
-                        ]),
-                        id=Table.OPTION.value
+                            dbc.Button([html.I(className='fas fa-edit'), " Edit"], id=Table.EDIT_BTN.value,
+                                       outline=False, color='primary', className='btn-icon btn-noticeable'),
+                            dbc.Button([html.I(className='fas fa-trash-alt'), " Delete"], id=Table.DEL_ROW_BTN.value,
+                                       outline=False, color='danger', className='btn-icon btn-noticeable'),
+
+                            dbc.Button([html.I(className='fas fa-clone'), " Clone"], id=Table.CLONE_ROW_BTN.value,
+                                       outline=False, color='success', className='btn-icon btn-noticeable'),
+
+                        ], className='d-flex justify-content-center mt-3'),
+
+                id=Table.OPTION.value
                     ),
                     width='auto',
                     className='d-flex justify-content-start'
@@ -479,22 +482,18 @@ runfile_layout = html.Div([
                         "filter": True,
                         "resizable": True,
                         "sortable": True,
-                        "autoSize": True,
                         "checkboxSelection": {
-                            "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                            "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
                         },
                         "headerCheckboxSelection": {
-                            "function": 'params.column == params.columnApi.getAllDisplayedColumns()[0]'
+                            "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
                         }
                     },
                     dashGridOptions={
-                        # "domLayout": "autoHeight",  # Automatically adjusts the height of the grid to its content
                         "rowSelection": "multiple",
                         "rowMultiSelectWithClick": True,
                         "suppressRowClickSelection": True,
                         'enableBrowserTooltips': True,
-                        'skipHeaderOnAutoSize': False,  # Include headers when auto-sizing
-                        'autoSizeOnLoad': True,  # Auto-size when data is loaded
 
                     },
 

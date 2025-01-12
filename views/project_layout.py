@@ -217,13 +217,14 @@ def view_result(n_clicks, active_session):
     Output('confirm-submit-job', 'is_open'),
     Input(Runfile.RUN_BTN.value, 'n_clicks'),
     Input('cancel-submit-job', 'n_clicks'),
+    Input('confirm-submit-job-btn', 'n_clicks'),
     prevent_initial_call=True
 )
-def show_confirm_submit(n_clicks, cancel_clicks):
+def show_confirm_submit(n_clicks, cancel_clicks, confirm_clicks):
     button_id = ctx.triggered_id
     if button_id == Runfile.RUN_BTN.value:
         return True
-    elif button_id == 'cancel-submit-job':
+    elif button_id == 'cancel-submit-job' or button_id == 'confirm-submit-job-btn':
         return False
 @app.callback(
     Output(Session.SUBMIT_JOB.value, 'children'),

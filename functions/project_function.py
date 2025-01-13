@@ -30,10 +30,13 @@ hostname = config['ssh']['hostname']
 username = config['ssh']['username']
 
 # Define the commands
-user = 'pipeline_web'
+#user = 'pipeline_web'
+user = 'xia'
 set_user_command = f'WORK_LMT_USER={user}'
 dispatch_command = 'lmtoy_dispatch/lmtoy_dispatch_session.sh'
 mk_runs_command = 'lmtoy_dispatch/lmtoy_mk_runs.sh'
+#ssh lmthelpdesk_umass_edu@unity.rc.umass.edu WORK_LMT_USER=pipeline_web  lmtoy_dispatch/lmtoy_clone_session.sh  projectid session
+clone_session_command = 'lmtoy_dispatch/lmtoy_clone_session.sh'
 
 
 # Function to get pid options from the given path
@@ -243,62 +246,82 @@ def save_runfile(df, runfile_path):
         f.write('\n'.join(lines))
 
 # clone a session: input is the path of the session to be cloned and the path of the new session
-def save_session(pid_path, name, active_session):
-    print(f"pid_path: {pid_path}, name: {name}, active_session: {active_session}")
+# def save_session(pid_path, name, active_session):
+#     print(f"pid_path: {pid_path}, name: {name}, active_session: {active_session}")
+#     try:
+#         # Create base session directory
+#         session_dir = os.path.join(pid_path, f'Session-{name}')
+#         if os.path.exists(session_dir):
+#             return f'session-{name} already exists', no_update
+#
+#         # Create required subdirectories
+#         os.makedirs(session_dir)
+#         os.makedirs(os.path.join(session_dir, current_user.username))
+#         os.makedirs(os.path.join(session_dir, 'sbatch'))
+#         os.makedirs(os.path.join(session_dir, 'tmp'))
+#         os.makedirs(os.path.join(session_dir, 'lmtoy_run'))
+#         os.makedirs(os.path.join(session_dir, 'lmtoy_run', f'lmtoy_{current_user.username}'))
+#
+#         # Clone lmtoy_run repository to the session_dir and move the files from lmtoy_run to session_dir
+#         temp_clone_dir = os.path.join(session_dir, 'temp_lmtoy_run')
+#         try:
+#             subprocess.run(['git', 'clone', 'https://github.com/lmtoy/lmtoy_run.git',
+#                             temp_clone_dir],
+#                            check=True,
+#                            capture_output=True)
+#             # Move the files from temp_lmtoy_run to session_dir/lmtoy_run
+#             for file in os.listdir(temp_clone_dir):
+#                 src = os.path.join(temp_clone_dir, file)
+#                 dst = os.path.join(session_dir, file)
+#                 if os.path.isfile(src):
+#                     shutil.copy2(src, dst)
+#                 elif os.path.isdir(src) and file != '.git':
+#                     shutil.copytree(src, dst, dirs_exist_ok=True)
+#             shutil.rmtree(temp_clone_dir)
+#
+#         except subprocess.CalledProcessError as e:
+#             if os.path.exists(temp_clone_dir):
+#                 shutil.rmtree(temp_clone_dir)
+#             raise Exception(f"Failed to clone lmtoy_run repository: {e.stderr.decode()}")
+#
+#         # Copy runfiles from old session path to new session path
+#         new_session_path = os.path.join(session_dir, 'lmtoy_run', f'lmtoy_{current_user.username}')
+#
+#         if active_session != init_session:
+#             old_session_path = os.path.join(pid_path, active_session, 'lmtoy_run',
+#                                             f'lmtoy_{current_user.username}')
+#         else:
+#             old_session_path = default_session_prefix + current_user.username
+#
+#         if os.path.exists(old_session_path):
+#             runfiles = find_runfiles(old_session_path, f'{current_user.username}.')
+#             for runfile in runfiles:
+#                 shutil.copy(os.path.join(old_session_path, runfile), new_session_path)
+#         return f"Successfully created session at {session_dir}", False
+#
+#     except Exception as e:
+#         logging.error(f"Error in save_session: {str(e)}")
+#         return f"Failed to save session: {str(e)}", no_update
+
+def save_session(pid_path, name):
+    pid = current_user.username
+    new_session_name = f'Session-{name}'
     try:
         # Create base session directory
-        session_dir = os.path.join(pid_path, f'Session-{name}')
+        session_dir = os.path.join(pid_path, new_session_name)
         if os.path.exists(session_dir):
             return f'session-{name} already exists', no_update
-
-        # Create required subdirectories
-        os.makedirs(session_dir)
-        os.makedirs(os.path.join(session_dir, current_user.username))
-        os.makedirs(os.path.join(session_dir, 'sbatch'))
-        os.makedirs(os.path.join(session_dir, 'tmp'))
-        os.makedirs(os.path.join(session_dir, 'lmtoy_run'))
-        os.makedirs(os.path.join(session_dir, 'lmtoy_run', f'lmtoy_{current_user.username}'))
-
-        # Clone lmtoy_run repository to the session_dir and move the files from lmtoy_run to session_dir
-        temp_clone_dir = os.path.join(session_dir, 'temp_lmtoy_run')
-        try:
-            subprocess.run(['git', 'clone', 'https://github.com/lmtoy/lmtoy_run.git',
-                            temp_clone_dir],
-                           check=True,
-                           capture_output=True)
-            # Move the files from temp_lmtoy_run to session_dir/lmtoy_run
-            for file in os.listdir(temp_clone_dir):
-                src = os.path.join(temp_clone_dir, file)
-                dst = os.path.join(session_dir, file)
-                if os.path.isfile(src):
-                    shutil.copy2(src, dst)
-                elif os.path.isdir(src) and file != '.git':
-                    shutil.copytree(src, dst, dirs_exist_ok=True)
-            shutil.rmtree(temp_clone_dir)
-
-        except subprocess.CalledProcessError as e:
-            if os.path.exists(temp_clone_dir):
-                shutil.rmtree(temp_clone_dir)
-            raise Exception(f"Failed to clone lmtoy_run repository: {e.stderr.decode()}")
-
-        # Copy runfiles from old session path to new session path
-        new_session_path = os.path.join(session_dir, 'lmtoy_run', f'lmtoy_{current_user.username}')
-
-        if active_session != init_session:
-            old_session_path = os.path.join(pid_path, active_session, 'lmtoy_run',
-                                            f'lmtoy_{current_user.username}')
+        full_command = f"{clone_session_command} {pid} {new_session_name}"
+        result = execute_ssh_command(full_command, set_user_command=set_user_command)
+        if result["returncode"] == 0:
+            return f"Successfully created session at {session_dir}", False
         else:
-            old_session_path = default_session_prefix + current_user.username
-
-        if os.path.exists(old_session_path):
-            runfiles = find_runfiles(old_session_path, f'{current_user.username}.')
-            for runfile in runfiles:
-                shutil.copy(os.path.join(old_session_path, runfile), new_session_path)
-        return f"Successfully created session at {session_dir}", False
-
+            return f"Failed to save session: {result['stderr']}", no_update
     except Exception as e:
         logging.error(f"Error in save_session: {str(e)}")
         return f"Failed to save session: {str(e)}", no_update
+
+
 
 def delete_session(pid_path, active_session):
     try:
@@ -407,7 +430,6 @@ def execute_remote_submit(pid, runfile,session):
 def get_source(pid):
     full_command = f"{mk_runs_command} {pid}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
-    print(f"Result: {result}")
     # checks if the command ran successfully(return code 0)
     if result["returncode"] == 0:
         output = result["stdout"]
@@ -662,8 +684,6 @@ def process_job_submission(pid,runfile, session,email):
     """
     Handles the job submission process asynchronously.
     """
-    # todo if session is 0
-    # if session==init_session:
 
     try:
         # Simulate remote submission process (replace with actual logic)

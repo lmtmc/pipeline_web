@@ -1,4 +1,5 @@
-#TODO submit job using the spatch_session_one.sh
+#TODO Test 'lmtoy_clone_session.sh'
+#TODO Test 'lmtoy_sbatch2.sh'
 #TODO monitor the slurm job status. When all finished make summary and send email to the user
 #TODO test the link of the view result button
 #TODO handle the error when lmtoy folder not found for a session
@@ -50,7 +51,7 @@ layout = html.Div(
      ]
 )
 
-# Hide the Delete Session for the default session
+# Hide the Delete Session for the default session and hide the clone button for other sessions
 @app.callback(
     [
         Output(Session.DEL_BTN.value, 'style'),
@@ -73,7 +74,7 @@ def default_session(active_session, data_store):
         return HIDE_STYLE, SHOW_STYLE, data_store
 
     # Default case: Show all buttons
-    return SHOW_STYLE, SHOW_STYLE, data_store
+    return SHOW_STYLE, HIDE_STYLE, data_store
 
 
 # update session list when modifying session
@@ -117,7 +118,7 @@ def update_session_display(n1, n2, n3, active_session, name):
             modal_open = True
 
         elif triggered_id == Session.SAVE_BTN.value:
-            message, modal_open = pf.save_session(pid_path, name, active_session)
+            message, modal_open = pf.save_session(pid_path, name)
 
         elif triggered_id == Session.CONFIRM_DEL.value:
             message = pf.delete_session(pid_path, active_session)

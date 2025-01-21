@@ -29,9 +29,9 @@ init_session = config['session']['init_session']
 hostname = config['ssh']['hostname']
 username = config['ssh']['username']
 
+
 # Define the commands
-#user = 'pipeline_web'
-user = 'xia'
+user = config['pipeline_user']['username']
 set_user_command = f'WORK_LMT_USER={user}'
 dispatch_command = 'lmtoy_dispatch/lmtoy_dispatch_session.sh'
 mk_runs_command = 'lmtoy_dispatch/lmtoy_mk_runs.sh'

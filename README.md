@@ -73,11 +73,11 @@ Default session (`session-0`) and previous sessions will be displayed.
 ### **Table Management**
 - After selecting a row or multiply row of the table, you can edit delete or clone the row(s).
 
-### ** Job Submit**
+### **Job Submit**
 - After selecting a runfile and typing a vaild email, you can submit the job by clicking `SUBMIT JOB`.
 
-### ** Job Status**
+### **Job Status**
 - After submitting a job, you can check the job status by clicking `JOB STATUS`.
 
-### ** FLOW CHART**
+### **FLOW CHART**
 [Flow Chart](./Pipeline_web_slide.pdf)

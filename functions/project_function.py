@@ -306,21 +306,21 @@ def save_runfile(df, runfile_path):
 def save_session(pid_path, name):
     pid = current_user.username
     new_session_name = f'Session-{name}'
+    session_dir = os.path.join(pid_path, new_session_name)
+    full_command = f"{clone_session_command} {pid} {new_session_name}"
     try:
         # Create base session directory
-        session_dir = os.path.join(pid_path, new_session_name)
         if os.path.exists(session_dir):
             return f'session-{name} already exists', no_update
-        full_command = f"{clone_session_command} {pid} {new_session_name}"
         result = execute_ssh_command(full_command, set_user_command=set_user_command)
-        if result["returncode"] == 0:
-            return f"Successfully created session at {session_dir}", False
-        else:
+        if result["returncode"] != 0 and 'Error' in result["stderr"]:
             return f"Failed to save session: {result['stderr']}", no_update
+
+        elif result["returncode"]!=0:
+            return f"Successfully created session at {session_dir}", False
     except Exception as e:
         logging.error(f"Error in save_session: {str(e)}")
-        return f"Failed to save session: {str(e)}", no_update
-
+        return f"Failed to save session {name}: {str(e)}", no_update
 
 
 def delete_session(pid_path, active_session):

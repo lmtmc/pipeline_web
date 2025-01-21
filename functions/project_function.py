@@ -244,6 +244,7 @@ def save_runfile(df, runfile_path):
     final_path = os.path.join(dir_path, filename)
     with open(final_path, 'w') as f:
         f.write('\n'.join(lines))
+        f.write('\n')
 
 # clone a session: input is the path of the session to be cloned and the path of the new session
 # def save_session(pid_path, name, active_session):

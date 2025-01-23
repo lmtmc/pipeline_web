@@ -130,8 +130,6 @@ def update_session_display(n1, n2, n3, active_session, name):
         # Ensure a valid active session
         active_session = active_session or init_session
 
-        # runfile_options, runfile_value = pf.get_runfile_info(active_session, pid_path)
-
         return session_list, modal_open, message, active_session
 
     except Exception as e:
@@ -237,14 +235,14 @@ def show_confirm_submit(n_clicks, cancel_clicks, confirm_clicks):
 )
 def submit_job(n_clicks,selected_runfile, session,email):
     selected_runfile = next((value for value in selected_runfile if value), None)
-    runfile = os.path.basename(selected_runfile)
+    runfile_name = os.path.basename(selected_runfile)
     if not email:
         return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True)
     # Step 1: Notify user in the UI
-    confirmation_message = (f"Job for runfile '{runfile}' in {session} has been submitted. ")
+    confirmation_message = (f"Job for runfile '{runfile_name}' in {session} has been submitted. ")
 
     # step 2: Submit the job
-    Thread(target=pf.process_job_submission, args=(current_user.username, runfile, session,email)).start()
+    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, session,email)).start()
     return dbc.Label(confirmation_message, color="success", className="mt-2")
 
 @app.callback(

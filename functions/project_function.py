@@ -509,13 +509,13 @@ def get_next_runfile_message(runfile, session):
 
         if suffix == 'run1a':
             next_runfile = runfile.replace('1a', '1b')
-            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+            next_job_message = f"Please log in to view result, edit and submit the next runfile: '{next_runfile}'"
         elif suffix == 'run1b':
             next_runfile = runfile.replace('1b', '2a')
-            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+            next_job_message = f"Please log in to view result, edit and submit the next runfile: '{next_runfile}'"
         elif suffix == 'run2a':
             next_runfile = runfile.replace('2a', '2b')
-            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+            next_job_message = f"Please log in to view result, edit and submit the next runfile: '{next_runfile}'"
         elif suffix == 'run2b':
             next_job_message = f"All jobs for session '{session}' have completed."
 

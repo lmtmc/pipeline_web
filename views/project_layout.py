@@ -238,12 +238,24 @@ def submit_job(n_clicks,selected_runfile, session,email):
     runfile_name = os.path.basename(selected_runfile)
     if not email:
         return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True)
-    # Step 1: Notify user in the UI
-    confirmation_message = (f"Job for runfile '{runfile_name}' in {session} has been submitted. ")
-
+        # Prepare confirmation message
+    confirmation_message = dbc.Alert(
+        [
+            html.Strong(f"Job Submitted: "),
+            f"Runfile '{runfile_name}' for {session} is being processed. ",
+            html.Br(),
+            f"Notification will be sent to {email} when complete."
+        ],
+        color="success",
+        dismissable=True
+    )
     # step 2: Submit the job
-    Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, session,email)).start()
-    return dbc.Label(confirmation_message, color="success", className="mt-2")
+    try:
+        Thread(target=pf.process_job_submission, args=(current_user.username, selected_runfile, session,email)).start()
+    except Exception as e:
+        logging.error(f"Error submitting job: {str(e)}")
+        return dbc.Alert(f"Error submitting job: {str(e)}", color="danger", dismissable=True)
+    return confirmation_message
 
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),

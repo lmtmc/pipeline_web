@@ -206,7 +206,7 @@ def show_runfile_buttons(active_session):
 def view_result(n_clicks, active_session):
     if not active_session:
         return no_update
-
+    pf.make_summary(current_user.username, active_session)
     result_url = pf.generate_result_url(current_user.username, active_session)
     return f"javascript:window.open('{result_url}', '_blank')"
 

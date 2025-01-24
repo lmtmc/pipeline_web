@@ -32,6 +32,7 @@ user = config['pipeline_user']['username']
 set_user_command = f'WORK_LMT_USER={user}'
 dispatch_command = 'lmtoy_dispatch/lmtoy_dispatch_session.sh'
 mk_runs_command = 'lmtoy_dispatch/lmtoy_mk_runs.sh'
+make_summary_command = 'lmtoy_dispatch/lmtoy_make_summary.sh'
 #ssh lmthelpdesk_umass_edu@unity.rc.umass.edu WORK_LMT_USER=pipeline_web  lmtoy_dispatch/lmtoy_clone_session.sh  projectid session
 clone_session_command = 'lmtoy_dispatch/lmtoy_clone_session.sh'
 
@@ -417,6 +418,7 @@ def are_jobs_finished(job_ids):
 def monitor_slurm_jobs(job_ids, check_interval=30):
     while True:
         if are_jobs_finished(job_ids):
+            print('all jobs are fininshed')
             return True
         time.sleep(check_interval)
 
@@ -442,10 +444,6 @@ def notify_user(job_ids, recipient_email, method="email",):
         return f"Notification: All jobs {job_ids} have completed."
     else:
         print(f"All jobs {job_ids} have completed.")
-# send email to user if the job is finished
-def send_email_alert(job_ids, recipient_email):
-    notify_user(job_ids, recipient_email, method="email")
-    return f"Email sent to {recipient_email}."
 
 def is_valid_email(email):
     """Validate the email format using a regex."""
@@ -498,6 +496,31 @@ def get_obsnum_options(source, selected_rows, data):
     disable_dropdowns = len(selected_rows) > 1
     return obsnum_dropdown_options, selected_obsnums, disable_dropdowns, disable_dropdowns
 
+
+def get_next_runfile_message(runfile, session):
+    """
+    Returns the next runfile and corresponding message based on the current runfile.
+    """
+    file_parts = runfile.split('.')
+    if len(file_parts) > 1:
+        suffix = file_parts[-1]
+        next_runfile = runfile
+        next_job_message = ""
+
+        if suffix == '1a':
+            next_runfile = runfile.replace('1a', '1b')
+            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+        elif suffix == '1b':
+            next_runfile = runfile.replace('1b', '2a')
+            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+        elif suffix == '2a':
+            next_runfile = runfile.replace('2a', '2b')
+            next_job_message = f"Please log in to view result and edit and submit the next runfile '{next_runfile}'"
+        elif suffix == '2b':
+            next_job_message = f"All jobs for session '{session}' have completed."
+
+        return next_runfile, next_job_message
+    return runfile, ""
 def process_job_submission(pid,selected_runfile, session,email):
     """
     Handles the job submission process asynchronously.
@@ -508,12 +531,13 @@ def process_job_submission(pid,selected_runfile, session,email):
         print(f"Submitting job for '{runfile}'...")
         success = execute_remote_submit(pid, runfile ,session)
 
-        # TODO send email in the script
+        # send email notification
         if email:
-            if success:
-                confirmation_message = f"Job for runfile '{runfile}' has been submitted successfully."
-            else:
-                confirmation_message = f"Failed to submit job for runfile '{runfile}'."
+            confirmation_message = (
+                f"Job for runfile '{runfile}' has been submitted successfully."
+                if success
+                else f"Failed to submit job for runfile '{runfile}'."
+            )
             send_email('Job Submission Confirmation', confirmation_message, email)
         if success:
             #Monitor job status until completion
@@ -522,12 +546,22 @@ def process_job_submission(pid,selected_runfile, session,email):
                 print(f"Monitoring job status for '{runfile}'...")
                 all_jobs_done = monitor_slurm_jobs(job_ids)
                 if all_jobs_done and email:
-                    completion_message = f"All jobs for runfile '{runfile}' have completed."
+                    next_runfile, next_job_message= get_next_runfile_message(runfile, session)
+                    completion_message = f"All jobs for runfile '{runfile}' have completed. {next_job_message}"
                     send_email('Job Completion Notification', completion_message, email)
 
     except Exception as e:
         # Log the exception for debugging (could also send an email or update a status)
         print(f"Error during job submission for '{runfile}': {e}")
+
+def make_summary(pid, activate_session):
+    full_command = f"{make_summary_command} {pid} {activate_session}"
+    result = execute_ssh_command(full_command, set_user_command=set_user_command)
+    if result["returncode"] == 0:
+        print(f"Successfully made summary for {pid}")
+    else:
+        print(f"Error in execution: {result['stderr']}")
+
 
 def generate_result_url(pid, session_name):
     # return http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/2023-S1-US-17/Session-1/2023-S1-US-17/README.html

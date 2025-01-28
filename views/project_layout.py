@@ -3,7 +3,6 @@
 #TODO monitor the slurm job status. When all finished make summary and send email to the user
 #TODO test the link of the view result button
 #TODO handle the error when lmtoy folder not found for a session
-#TODO add make summary 
 import logging
 import os
 from threading import Thread
@@ -56,6 +55,7 @@ layout = html.Div(
     [
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
+        Output('save-filter-btn', 'style'),
         Output('data-store', 'data'),
     ],
     Input(Session.SESSION_LIST.value, 'active_item'),
@@ -67,14 +67,13 @@ def default_session(active_session, data_store):
 
     if active_session is None:
         # Hide all buttons if no session is selected
-        return HIDE_STYLE, HIDE_STYLE, data_store
+        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE,data_store
 
     if active_session == init_session:
         # Hide delete buttons and show only the new session button for the default session
-        return HIDE_STYLE, SHOW_STYLE, data_store
+        return HIDE_STYLE, SHOW_STYLE, HIDE_STYLE,data_store
 
-    # Default case: Show all buttons
-    return SHOW_STYLE, HIDE_STYLE, data_store
+    return SHOW_STYLE, HIDE_STYLE, SHOW_STYLE,data_store
 
 
 # update session list when modifying session
@@ -117,18 +116,25 @@ def update_session_display(n1, n2, n3, active_session, name):
         if triggered_id == Session.NEW_BTN.value:
             modal_open = True
 
+        # handle save session
         elif triggered_id == Session.SAVE_BTN.value:
-            message, modal_open = pf.save_session(pid_path, name)
-
+            if not name:
+                message = "Please enter a session name."
+            else:
+                message, modal_open = pf.save_session(pid_path, name)
+                session_list = pf.get_session_list(init_session, pid_path)
+                active_session = f'Session-{name}' if "Successfully" in message else active_session
+        # handle delete session
         elif triggered_id == Session.CONFIRM_DEL.value:
             message = pf.delete_session(pid_path, active_session)
             active_session = None if "Successfully" in message else active_session
+            session_list = pf.get_session_list(init_session, pid_path)
 
         if triggered_id in [Session.SAVE_BTN.value, Session.CONFIRM_DEL.value]:
             active_session = init_session if active_session is None else active_session
 
-        # Ensure a valid active session
-        active_session = active_session or init_session
+        # # Ensure a valid active session
+        # active_session = active_session or init_session
 
         return session_list, modal_open, message, active_session
 
@@ -206,7 +212,10 @@ def show_runfile_buttons(active_session):
 def view_result(n_clicks, active_session):
     if not active_session:
         return no_update
-    pf.make_summary(current_user.username, active_session)
+    try:
+        pf.make_summary(current_user.username, active_session)
+    except Exception as e:
+        logging.error(f"Error making summary: {str(e)}")
     result_url = pf.generate_result_url(current_user.username, active_session)
     return f"javascript:window.open('{result_url}', '_blank')"
 
@@ -976,6 +985,72 @@ def toggle_parameter_help(n_clicks, current_style):
     else:
         # Show the help section
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
+
+@app.callback(
+    [
+        Output('runfile-table', 'rowData'),
+        Output('save-filter-alert','displayed')
+    ],
+    [
+        Input('save-filter-btn', 'n_clicks'),
+        Input('save-filter-alert', 'submit_n_clicks'),
+        Input('save-filter-alert', 'cancel_n_clicks')
+    ],
+    [
+        State('runfile-table', 'rowData'),
+        State('runfile-table', 'filterModel'),
+        State('data-store', 'data')
+    ],
+    prevent_initial_call=True
+)
+def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_model, data_store):
+    if not ctx.triggered:
+        raise PreventUpdate
+    if ctx.triggered_id == 'save-filter-btn':
+        return no_update, True
+    elif ctx.triggered_id == 'save-filter-alert':
+        # Convert the row data and data store to DataFrame
+        df = pd.DataFrame(row_data)
+        # Apply the filter model to the DataFrame
+        if filter_model:
+            for column, filter_details in filter_model.items():
+                if column not in df.columns:
+                    print(f"Column '{column}' not found in DataFrame.")
+                    continue
+
+                if filter_details['filterType'] == 'text':
+                    filter_value = filter_details['filter']
+                    filter_type = filter_details.get('type', 'contains')  # Default to 'contains'
+
+                    if filter_type == 'contains':
+                        df = df[df[column].astype(str).str.contains(filter_value, case=False, na=False)]
+                    elif filter_type == 'equals':
+                        df = df[df[column] == filter_value]
+                    # Add more filter types here as needed
+
+                elif filter_details['filterType'] == 'number':
+                    filter_value = filter_details['filter']
+                    filter_type = filter_details.get('type', 'equals')  # Default to 'equals'
+
+                    if filter_type == 'equals':
+                        df = df[df[column] == filter_value]
+                    elif filter_type == 'greaterThan':
+                        df = df[df[column] > filter_value]
+                    elif filter_type == 'lessThan':
+                        df = df[df[column] < filter_value]
+                    # Add more filter types here as needed
+
+                elif filter_details['filterType'] == 'set':
+                    filter_values = filter_details['values']
+                    df = df[df[column].isin(filter_values)]
+        # Save the filtered data
+        filtered_data = df.to_dict('records')
+        print(f"Filtered data saved to {data_store['selected_runfile']}")
+        pf.save_runfile(df, data_store['selected_runfile'])
+        return filtered_data, False
+    elif ctx.triggered_id == 'save-filter-alert.cancel_n_clicks':
+        return no_update, False
+    return no_update, no_update
 
 # if there is job running disable the sumbit job button
 # TODO disable this function for now

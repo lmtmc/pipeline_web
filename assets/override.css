@@ -635,3 +635,7 @@ display : block !important;
     border: 2px solid #0056b3; /* Darker blue border */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
 }
+
+.small-font {
+    font-size: 14px;
+}

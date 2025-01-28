@@ -425,32 +425,36 @@ def create_parameter_layout_modal(instrument,row_length,configs):
         backdrop='static'
     )
 
-runfile_layout = html.Div([
-    dbc.Card([
-        dbc.CardHeader(
-            dbc.Row([
-                dbc.Col(
-                    dbc.Label(id=Runfile.CONTENT_TITLE.value),
-                    className='d-flex align-items-center',  # Center vertically
-                    width=8
-                ),
-                dbc.Col(
-                    dbc.ButtonGroup([
-                        html.Div(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
+runfile_layout = html.Div(
+    [
+        dbc.Card(
+            [
+                dbc.CardHeader(
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                dbc.Label(id=Runfile.CONTENT_TITLE.value),
+                                className='d-flex align-items-center',  # Center vertically
+                                # width=8
+                                ),
+                            dbc.Col(
+                                dbc.ButtonGroup(
+                                    [
+                                        html.Div(dbc.Button("Submit Job", id=Runfile.RUN_BTN.value, color='primary',
                                    className='me-2'), id='runfile-run-btn'),  # Using me-2 instead of margin-right
-                        html.Div(dbc.Button("Check Status", id="check-status-btn", color='secondary',
+                                        html.Div(dbc.Button("Check Status", id="check-status-btn", color='secondary',
                                    className='me-2'), id='runfile-check-status-btn'),
-                        dbc.Button("View Result", id='view-result-link', color='success')
+                                        dbc.Button("View Result", id='view-result-link', color='success')
                     ], size='md'),
                     className='d-flex justify-content-end',  # Align buttons to the right
                     width='auto'
                 ),
                 dcc.Location(id='result-location', refresh=True),
             ], className='d-flex justify-content-between align-items-center')
-        ),
-        dbc.CardBody([
+                ),
+                dbc.CardBody([
             # ButtonGroup in the same row, right next to the label
-            dbc.Row([
+                dbc.Row([
                 dbc.Col(
                     html.Div(
                         dbc.ButtonGroup([
@@ -463,8 +467,7 @@ runfile_layout = html.Div([
                                        outline=False, color='success', className='btn-icon btn-noticeable'),
 
                         ], className='d-flex justify-content-center mt-3'),
-
-                id=Table.OPTION.value
+                        id=Table.OPTION.value
                     ),
                     width='auto',
                     className='d-flex justify-content-start'
@@ -473,39 +476,39 @@ runfile_layout = html.Div([
             dbc.Tooltip("Delete Row(s)", target=Table.DEL_ROW_BTN.value, placement='bottom'),
             dbc.Tooltip("Clone Row(s)", target=Table.CLONE_ROW_BTN.value, placement='bottom')
             ]),
-            html.Div([
-                dbc.Alert(id=Runfile.VALIDATION_ALERT.value, is_open=False, dismissable=True),
-                AgGrid(
-                    id='runfile-table',
-                    rowData=[],
-                    defaultColDef={
-                        "filter": True,
-                        "resizable": True,
-                        "sortable": True,
-                        "checkboxSelection": {
-                            "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                html.Div(
+                    [
+                        AgGrid(
+                        id='runfile-table',
+                        rowData=[],
+                        defaultColDef={
+                            "filter": True,
+                            "resizable": True,
+                            "sortable": True,
+                            "checkboxSelection": {
+                                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                            },
+                            "headerCheckboxSelection": {
+                                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                            }
                         },
-                        "headerCheckboxSelection": {
-                            "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
-                        }
-                    },
-                    dashGridOptions={
-                        "rowSelection": "multiple",
-                        "rowMultiSelectWithClick": True,
-                        "suppressRowClickSelection": True,
-                        'enableBrowserTooltips': True,
-
-                    },
-
-                    className="ag-theme-alpine",
-                    style={'height': '45vh'}
-                )
-            ]),
+                        dashGridOptions={
+                            "rowSelection": "multiple",
+                            "rowMultiSelectWithClick": True,
+                            "suppressRowClickSelection": True,
+                            'enableBrowserTooltips': True,
+                        },
+                        className="ag-theme-alpine",
+                        style={'height': '45vh'}
+                ),
+                dbc.Button('Save Filtered Data', id='save-filter-btn', color='primary', className='mt-3'),
+                dcc.ConfirmDialog(id='save-filter-alert', message='Are you sure you want to save the filtered data?'),
+                ])
+                ]),
             dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message=''),
             dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message=''),
 
     ]),
-], className='mb-3'),
         dbc.Modal([
             dbc.ModalHeader(
                 dbc.ModalTitle("Submit Job to UNITY", className="text-primary"),
@@ -513,7 +516,7 @@ runfile_layout = html.Div([
             ),
             dbc.ModalBody([
                 html.Div([
-                    html.H5(className="mb-3 text-dark", id="submit-job-confirm-text"),
+                    html.H5(className="mb-3 text-dark small-font", id="submit-job-confirm-text"),
                     dbc.Form([
                         dbc.Row([
                             dbc.Col([

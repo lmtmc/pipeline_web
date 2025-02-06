@@ -2,11 +2,11 @@
 #TODO Test 'lmtoy_sbatch2.sh'
 #TODO monitor the slurm job status. When all finished make summary and send email to the user
 #TODO test the link of the view result button
-#TODO handle the error when lmtoy folder not found for a session
+import json
 import logging
 import os
+import time
 from threading import Thread
-
 import pandas as pd
 from dash import html, Input, Output, State, ALL, ctx, no_update, dcc
 from dash.exceptions import PreventUpdate
@@ -47,6 +47,7 @@ layout = html.Div(
         ], className='mb-3'),
         ui.job_status_layout,
         html.Div(id='parameter-edit-selector'),
+        dcc.Location(id='result-location', refresh=True),
      ]
 )
 
@@ -77,7 +78,6 @@ def default_session(active_session, data_store):
 
 
 # update session list when modifying session
-# TODO update the session list when a new session is created or deleted
 @app.callback(
     [
         Output(Session.SESSION_LIST.value, 'children'),
@@ -139,8 +139,9 @@ def update_session_display(n1, n2, n3, active_session, name):
         return session_list, modal_open, message, active_session
 
     except Exception as e:
+        session_list = pf.get_session_list(init_session, pid_path)
         logging.error(f"Error in update_session_display: {str(e)}")
-        return [], False, f"An error occurred: {str(e)}", None, [], None
+        return session_list, False, f"An error occurred: {str(e)}", None
 
 # display confirmation alert when delete session button is clicked
 @app.callback(
@@ -194,30 +195,36 @@ def show_runfile_buttons(active_session):
             "resizable": True,
             "sortable": True,
             "checkboxSelection": {
-                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
             },
             "headerCheckboxSelection": {
-                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
             },
         }
+
     return SHOW_STYLE, SHOW_STYLE, dashGridOptions, defaultColDef
 
 # if click the view result button go to the url to view the result
 @app.callback(
-    Output('result-location', 'href'),
+    Output('result-location', 'href'),  # Keep the current URL
     Input('view-result-link', 'n_clicks'),
     State(Session.SESSION_LIST.value, 'active_item'),
     prevent_initial_call=True
 )
 def view_result(n_clicks, active_session):
     if not active_session:
-        return no_update
+        return no_update, no_update
+
     try:
         pf.make_summary(current_user.username, active_session)
+        result_url = pf.generate_result_url(current_user.username, active_session)
+        print(f"Debug - Result URL: {result_url}")
+
+        # Return both the URL for the hidden div and keep current location
+        return result_url
     except Exception as e:
-        logging.error(f"Error making summary: {str(e)}")
-    result_url = pf.generate_result_url(current_user.username, active_session)
-    return f"javascript:window.open('{result_url}', '_blank')"
+        logging.error(f"Error in view_result: {str(e)}")
+        return no_update
 
 # submit job
 # if submit job is clicked show confirm submit modal, if cancel submit job is clicked hide the modal
@@ -832,13 +839,13 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     # Generate column definitions
     column_defs = [
         {
-            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
-            'field': col,
+            'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else str(col),
+            'field': str(col),
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{col} column',
         }
-        for col in columns_with_values
+        for col in columns_with_values if str(col)!='length'
     ]
 
     # Save the updated runfile if applicable
@@ -1053,19 +1060,20 @@ def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_mod
     return no_update, no_update
 
 # if there is job running disable the sumbit job button
-# TODO disable this function for now
-# @app.callback(
-#     Output(Runfile.RUN_BTN.value, 'disabled'),
-#     Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-#     prevent_initial_call=True
-# )
-# def disable_submit_job_button(selected_runfile):
-#     selected_runfile = next((value for value in selected_runfile if value), None)
-#     status, finished = pf.check_runfile_job_status(selected_runfile)
-#     # if the job is running, disable the submit job button
-#     if not finished:
-#         return False
-#     return True
+@app.callback(
+    Output(Runfile.RUN_BTN.value, 'disabled'),
+    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def disable_submit_job_button(selected_runfile):
+    selected_runfile = next((value for value in selected_runfile if value), None)
+    if not selected_runfile:
+        return True
+    status, finished = pf.check_runfile_job_status(selected_runfile)
+    # if the job is running, disable the submit job button
+    if not finished:
+        return True
+    return False
 
 
 # click runfile delete button, show the confirmation alert

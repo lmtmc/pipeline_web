@@ -101,18 +101,29 @@ def get_runfile_option(session_path):
 
 def get_session_list(default_session, pid_path):
     session_info = get_session_info(default_session, pid_path)
-    return [
-        dbc.AccordionItem(
-            [dbc.RadioItems(id={'type': 'runfile-radio', 'index': session['name']},
-                            options=get_runfile_option(session['path']),
-                            # className='my-radio-items',
-                            inline=True
-                            )],
-            title=session['name'], className='mb-2', item_id=session['name'],
-        )
-        for session in session_info
-    ]
+    session_items = []
 
+    for session in session_info:
+        try:
+            # Attempt to get runfile options for the session
+            options = get_runfile_option(session['path'])
+            session_item = dbc.AccordionItem(
+                [dbc.RadioItems(
+                    id={'type': 'runfile-radio', 'index': session['name']},
+                    options=options,
+                    inline=True
+                )],
+                title=session['name'],
+                className='mb-2',
+                item_id=session['name'],
+            )
+            session_items.append(session_item)
+        except Exception as e:
+            # Log the error and skip this session
+            logging.error(f"Error processing session {session['name']}: {str(e)}")
+            continue  # Skip this session and continue with the next one
+
+    return session_items
 def del_runfile(runfile):
     # Check if the file exists
     if os.path.exists(runfile):
@@ -383,8 +394,10 @@ def check_runfile_job_status(runfile_path):
             except ValueError:
                 print(f"Error parsing line: {line}")
 
-        if not job_statuses:
-            return "No running jobs found.", False
+        # Determine if all jobs are finished
+        running_states = {"PD", "R", "CG", "CF", "CA", "CD", "F", "NF", "TO"}
+        if any(job["State"] in running_states for job in job_statuses):
+            return job_statuses, False
 
         return job_statuses, True
 
@@ -564,11 +577,18 @@ def make_summary(pid, activate_session):
 
 
 def generate_result_url(pid, session_name):
-    # return http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/2023-S1-US-17/Session-1/2023-S1-US-17/README.html
-    if session_name == init_session:
-        return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/README.html"
+    # Validate inputs
+    if not pid or not session_name:
+        raise ValueError(f"Invalid inputs - pid: {pid}, session: {session_name}")
+
+    # Check if session_name is init_session
+    is_init = session_name == init_session
+
+    if is_init:
+        url = f"http://taps.lmtgtm.org/lmtslr/{pid}/README.html"
     else:
-        return f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/{pid}/README.html"
+        url = f"http://taps.lmtgtm.org/lmthelpdesk/pipeline_web/{pid}/{session_name}/{pid}/README.html"
+    return url
 
 def get_parameter_info(url):
     if not url:

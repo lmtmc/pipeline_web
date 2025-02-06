@@ -14,12 +14,8 @@ except Exception as e:
 prefix = config['path']['prefix']
 tooltip_style = {
         'fontSize': '1.5rem',         # Adjust font size
-        # 'backgroundColor': 'white', # Set background color (e.g., red for danger)
-        # 'color': 'grey',             # Set text color (white for contrast)
         'borderRadius': '5px',        # Optional: Add rounded corners to the tooltip
         'padding': '5px 10px',        # Optional: Add some padding inside the tooltip
-        # 'boxShadow': '0px 4px 6px rgba(0, 0, 0, 0.1)', # Optional: Add shadow for depth
-        # 'maxWidth': '200px'           # Optional: Limit the width of the tooltip
     }
 class Session(Enum):
     NAME_INPUT = 'session-name'
@@ -444,12 +440,17 @@ runfile_layout = html.Div(
                                    className='me-2'), id='runfile-run-btn'),  # Using me-2 instead of margin-right
                                         html.Div(dbc.Button("Check Status", id="check-status-btn", color='secondary',
                                    className='me-2'), id='runfile-check-status-btn'),
-                                        dbc.Button("View Result", id='view-result-link', color='success')
+                                        dbc.Button(
+                                            "View Result",
+                                            id='view-result-link',
+                                            color='success',
+                                            n_clicks=0  # Add this explicitly
+                                        ),
                     ], size='md'),
                     className='d-flex justify-content-end',  # Align buttons to the right
                     width='auto'
                 ),
-                dcc.Location(id='result-location', refresh=True),
+
             ], className='d-flex justify-content-between align-items-center')
                 ),
                 dbc.CardBody([
@@ -486,10 +487,10 @@ runfile_layout = html.Div(
                             "resizable": True,
                             "sortable": True,
                             "checkboxSelection": {
-                                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
                             },
                             "headerCheckboxSelection": {
-                                "function": 'params.column == params.api.getAllDisplayedColumns()[0]'
+                                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
                             }
                         },
                         dashGridOptions={

@@ -194,12 +194,6 @@ def show_runfile_buttons(active_session):
             "filter": True,
             "resizable": True,
             "sortable": True,
-            "checkboxSelection": {
-                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
-            },
-            "headerCheckboxSelection": {
-                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
-            },
         }
 
     return SHOW_STYLE, SHOW_STYLE, dashGridOptions, defaultColDef
@@ -360,9 +354,13 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{c} column',
+            'checkboxSelection': c == 'index',
+            'headerCheckboxSelection': c == 'index',
         } for c in runfile_data.columns
     ]
-
+    print(f"Debug - runfile_data type: {type(runfile_data)}")
+    print(f"Debug - column_defs: {column_defs}")
+    print(f"Debug - row_data: {row_data}")
 
     # Replace NaN values in the data
     cleaned_row_data = []
@@ -758,6 +756,8 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{col} column',
+            'checkboxSelection': col == 'index',
+            'headerCheckboxSelection': col == 'index',
         }
         for col in columns_with_values
     ]
@@ -767,7 +767,14 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
     if runfile:
         pf.save_runfile(row_data_df, runfile)
 
-    return column_defs, row_data_df.to_dict('records')
+    print(f"Debug - Updated rsr row data: {row_data_df.to_dict('records')}")
+    print(f"Debug - Updated rsr column defs: {column_defs}")
+    row_data = row_data_df.to_dict('records')
+    for row in row_data:
+        if isinstance(row['obsnum'], list):
+            row['obsnum'] = ','.join(row['obsnum'])
+
+    return column_defs, row_data
 #
 # #Update the selected row with all parameters for seq layout
 @app.callback(
@@ -844,6 +851,8 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{col} column',
+            'checkboxSelection': col == 'index',
+            'headerCheckboxSelection': col == 'index',
         }
         for col in columns_with_values if str(col)!='length'
     ]
@@ -898,6 +907,8 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{col} column',
+            'checkboxSelection': col == 'index',
+            'headerCheckboxSelection': col == 'index',
         }
         for col in columns_with_values
     ]
@@ -948,6 +959,8 @@ def update_selected_rows(n_clicks, selected_rows, row_data, data_store, column, 
             'filter': True,
             'sortable': True,
             'headerTooltip': f'{col} column',
+            'checkboxSelection': col == 'index',
+            'headerCheckboxSelection': col == 'index',
         }
         for col in columns_with_values
     ]

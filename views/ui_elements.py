@@ -486,17 +486,12 @@ runfile_layout = html.Div(
                             "filter": True,
                             "resizable": True,
                             "sortable": True,
-                            "checkboxSelection": {
-                                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
-                            },
-                            "headerCheckboxSelection": {
-                                "valueGetter": 'params.column == params.api.getAllDisplayedColumns()[0]'
-                            }
                         },
                         dashGridOptions={
                             "rowSelection": "multiple",
                             "rowMultiSelectWithClick": True,
                             "suppressRowClickSelection": True,
+                            "animateRows": False,
                             'enableBrowserTooltips': True,
                         },
                         className="ag-theme-alpine",

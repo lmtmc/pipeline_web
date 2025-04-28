@@ -1,0 +1,177 @@
+.projects-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-title {
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.projects-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.projects-table th {
+    background: #f8f9fa;
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+    font-size: 1.1em;
+    letter-spacing: 0.3px;
+}
+
+.projects-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+}
+
+.projects-table tr:last-child td {
+    border-bottom: none;
+}
+
+.projects-table tr:hover td {
+    background-color: #f8f9fa;
+}
+
+.project-name {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2c3e50;
+    letter-spacing: 0.5px;
+}
+
+.project-time {
+    color: #666;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+/* Style for GitHub and View buttons in the table */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+    font-family: inherit;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td[data-dash-column="GitHub Page"] a {
+    background: #24292e;
+    color: white;
+    text-decoration: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td[data-dash-column="GitHub Page"] a:hover {
+    background: #1b1f23;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td[data-dash-column="Actions"] a {
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td[data-dash-column="Actions"] a:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Style for sort icons */
+.dash-header .sort {
+    color: #495057;
+    transition: color 0.2s ease;
+}
+
+.dash-header .sort:hover {
+    color: #212529;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .projects-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .projects-table th,
+    .projects-table td {
+        padding: 12px 15px;
+    }
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.github-link {
+    background: #24292e;
+    color: white;
+    text-decoration: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.github-link:hover {
+    background: #1b1f23;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.view-button {
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-block;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-button:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+} 

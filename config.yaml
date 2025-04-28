@@ -4,7 +4,6 @@ database:
 path:
   work_lmt: /home/lmt/work_lmt
   prefix: /pipeline_web/
-  python_path: /home/lmt/LMT_projects/lmt_web_lite/env/bin/python3.9
 
 session:
   init_session: session-0
@@ -14,6 +13,6 @@ ssh:
   hostname: unity.rc.umass.edu
 
 pipeline_user:
-  username: xia
+  username: pipeline_web
 
 

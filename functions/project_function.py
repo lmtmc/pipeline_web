@@ -71,23 +71,25 @@ def find_files(folder_path, prefix):
 
     return sorted(filtered_files)
 
-def find_runfiles(folder_path, prefix):
-    matching_files = find_files(folder_path, prefix)
+def find_runfiles(folder_path, pid):
+    matching_files = find_files(folder_path, pid)
     if not matching_files:
         print("No matching files found. Running 'mk_runs.py'")
-        matching_files = find_files(folder_path, prefix)
+        matching_files = find_files(folder_path, pid)
         if matching_files:
             print(f"Matching files: {matching_files}")
     return matching_files
 
 # get the session names and their paths in a folder
 def get_session_info(default_session, pid_path):
-    default_session_path = os.path.join(os.path.dirname(pid_path), 'lmtoy_run', f'lmtoy_{current_user.username}')
+    # Get the PID from the path
+    pid = os.path.basename(pid_path)
+    default_session_path = os.path.join(os.path.dirname(pid_path), 'lmtoy_run', f'lmtoy_{pid}')
     session_info = [{'name': default_session, 'path': default_session_path}]
 
     if ensure_path_exists(pid_path):
         new_sessions = [
-            {'name': file, 'path': os.path.join(pid_path, file, 'lmtoy_run', f'lmtoy_{current_user.username}')}
+            {'name': file, 'path': os.path.join(pid_path, file, 'lmtoy_run', f'lmtoy_{pid}')}
             for file in sorted(os.listdir(pid_path))
             if file.startswith('Session')
         ]
@@ -95,18 +97,18 @@ def get_session_info(default_session, pid_path):
         session_info.extend(new_sessions)
     return session_info
 
-def get_runfile_option(session_path):
-    matching_files = find_runfiles(session_path, f'{current_user.username}.')
+def get_runfile_option(session_path,pid):
+    matching_files = find_runfiles(session_path, f'{pid}.')
     return [{'label': label, 'value': f'{session_path}/{label}'} for label in matching_files]
 
-def get_session_list(default_session, pid_path):
+def get_session_list(default_session, pid_path,pid):
     session_info = get_session_info(default_session, pid_path)
     session_items = []
 
     for session in session_info:
         try:
             # Attempt to get runfile options for the session
-            options = get_runfile_option(session['path'])
+            options = get_runfile_option(session['path'],pid)
             session_item = dbc.AccordionItem(
                 [dbc.RadioItems(
                     id={'type': 'runfile-radio', 'index': session['name']},

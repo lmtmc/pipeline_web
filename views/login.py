@@ -1,5 +1,5 @@
 import concurrent
-
+from flask import request, session
 from dash import dcc, html, Input, Output, State, no_update
 import os
 import dash_bootstrap_components as dbc
@@ -9,6 +9,8 @@ from werkzeug.security import check_password_hash
 from functions import project_function as pf
 from views.ui_elements import Storage
 from config_loader import load_config
+from functions.logger import log_login_attempt, log_session_start, logger
+from datetime import datetime
 
 # Load configuration
 try:
@@ -38,7 +40,6 @@ layout = dbc.Container(
     style={'width': '500px', 'margin': 'auto'}
 )
 
-# if both pid and password have value then enable the login button
 @app.callback(
     Output('login-button', 'style'),
     [
@@ -47,13 +48,11 @@ layout = dbc.Container(
     ]
 )
 def disable_login_button(pid, password):
+    """Enable/disable login button based on input values."""
     if pid and password:
         return {'pointer-events': 'auto', 'opacity': '1'}
     return {'pointer-events': 'none', 'opacity': '0.5'}
 
-
-
-# if the input password matches the pid password, login to that pid
 @app.callback(
     [
         Output('url_login', 'pathname'),
@@ -72,6 +71,7 @@ def disable_login_button(pid, password):
     prevent_initial_call='initial_duplicate'
 )
 def login_state(n_clicks, pid, password, is_open, data):
+    """Handle user login and redirect to appropriate page."""
     if not n_clicks:
         return no_update, no_update, no_update, no_update, no_update
 
@@ -80,24 +80,41 @@ def login_state(n_clicks, pid, password, is_open, data):
         user = User.query.filter_by(username=pid).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
+            # Log successful login
+            log_login_attempt(
+                username=pid,
+                success=True,
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string
+            )
+            
             # Initialize data if None
             if data is None:
                 data = {}
-            source = pf.get_source(pid)  # Fetch source from function
-            # Update data with PID and source
-            data.update({
-                'pid': pid,
-                'source': source
-            })
+
+            # Log session start
+            session_id = session.get('_id', 'unknown')
+            log_session_start(
+                username=pid,
+                session_id=session_id,
+                ip_address=request.remote_addr
+            )
 
             if user.username == 'admin':
                 return f'{prefix}admin', '', False, data, ''
             # Successful login, redirect to project page
             return f'{prefix}project/{pid}', '', False, data, ''
         else:
+            # Log failed login attempt
+            log_login_attempt(
+                username=pid,
+                success=False,
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string
+            )
             # Invalid credentials
             return f'{prefix}login', 'Invalid password', True, data, ''
     except Exception as e:
-        # Log the error and return error message
-        print(f"Error during login: {e}")
+        # Log the error
+        logger.error(f"Error during login for user {pid}: {str(e)}", exc_info=True)
         return f'{prefix}login', f'Error: {e}', True, data, ''

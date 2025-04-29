@@ -630,7 +630,3 @@ def get_parameter_info(url):
             parameters[current_section][param_name.strip()] = param_desc.strip()
 
     return parameters
-
-# parameters = get_parameter_info(url)
-# rsr_parameters = parameters['RSR/BS']
-# sequoia_parameters = parameters['SEQ/MAP']

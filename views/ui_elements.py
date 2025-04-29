@@ -1,4 +1,3 @@
-# slider and checklist cause issue
 from dash import dcc, html, Output, State, dash_table, dcc
 import dash_bootstrap_components as dbc
 from dash_ag_grid import AgGrid

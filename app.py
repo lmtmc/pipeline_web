@@ -1,13 +1,19 @@
-from dash import dcc, html, Input, Output, State
-from my_server import app
-from flask_login import logout_user, current_user
-from flask import session
-from views import login, help, ui_elements as ui, admin_page, project_layout
-import argparse
-from config_loader import load_config
+# Standard library imports
 import os
+import argparse
+from flask import session
+from flask_login import logout_user, current_user
 
-# load the configuration
+# Third-party imports
+from dash import dcc, html, Input, Output, State
+
+# Local imports
+from my_server import app
+from views import login, help, ui_elements as ui, admin_page, project_layout
+from config_loader import load_config
+from functions import project_function as pf
+
+# Load configuration
 try:
     config = load_config()
 except Exception as e:
@@ -18,7 +24,7 @@ except Exception as e:
 PREFIX = config['path']['prefix']
 DEFAULT_WORK_LMT = config['path']['work_lmt']
 
-# todo add another layer of data_store for different pid
+# Data store initialization
 DATA_STORE_INIT = {
     'pid': None,
     'runfile': None,
@@ -29,9 +35,8 @@ DATA_STORE_INIT = {
     'selected_project': None
 }
 
-
-# Define the app layout
 def create_layout():
+    """Create the main application layout."""
     return html.Div(
         [
             html.Div(id='navbar-container'),
@@ -57,6 +62,7 @@ app.layout = create_layout()
     prevent_initial_call=True
 )
 def update_page(pathname, data):
+    """Update the page content based on the current URL path."""
     if not data:
         data = DATA_STORE_INIT
 
@@ -69,52 +75,58 @@ def update_page(pathname, data):
         if is_authenticated:
             if current_user.is_admin:
                 return navbar, admin_page.layout, data
-            else:
-                return navbar, project_layout.layout, data
-        else:
-            return navbar, login.layout, data
+            return navbar, project_layout.layout, data
+        return navbar, login.layout, data
 
     # Remove prefix if present
-    if pathname.startswith(PREFIX):
-        route = pathname[len(PREFIX):]
-    else:
-        route = pathname.lstrip('/')
+    route = pathname[len(PREFIX):] if pathname.startswith(PREFIX) else pathname.lstrip('/')
 
+    # Route handling
     if route in ['', 'login']:
         if is_authenticated:
             if current_user.is_admin:
                 return navbar, admin_page.layout, data
-            else:
-                return navbar, project_layout.layout, data
+            return navbar, project_layout.layout, data
         return navbar, login.layout, data
+    
     elif route == 'admin' and is_authenticated and current_user.is_admin:
         return navbar, admin_page.layout, data
+    
     elif route.startswith('project/'):
         if not is_authenticated:
             return navbar, login.layout, data
-        # Extract PID from the route
+            
+        # Extract PID and update data store
         pid = route.split('/')[1]
-        # Update data store with the selected PID
         data['pid'] = pid
         data['selected_project'] = pid
+        
+        # Get source for the PID
+        try:
+            source = pf.get_source(pid)
+            data['source'] = source
+        except Exception as e:
+            print(f"Error getting source for PID {pid}: {str(e)}")
+        
         return navbar, project_layout.layout, data
+    
     elif route == 'help':
         return navbar, help.layout, data
+    
     elif route == 'logout':
         if is_authenticated:
             data = DATA_STORE_INIT
             logout_user()
             session.clear()
         return navbar, dcc.Location(pathname=f'{PREFIX}login', id='redirect-after-logout'), data
+    
     elif not is_authenticated:
         return navbar, login.layout, data
-    else:
-        return navbar, html.Div('404 - Page not found'), data
+    
+    return navbar, html.Div('404 - Page not found'), data
 
-server = app.server
-
-# Run the server
 def main():
+    """Run the server with command line arguments."""
     parser = argparse.ArgumentParser(description="Run the Dash app")
     parser.add_argument("-p", "--port", type=int, default=8000, help="Port to run the Dash app on")
     args = parser.parse_args()

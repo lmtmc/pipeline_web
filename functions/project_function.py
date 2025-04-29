@@ -75,6 +75,7 @@ def find_runfiles(folder_path, pid):
     matching_files = find_files(folder_path, pid)
     if not matching_files:
         print("No matching files found. Running 'mk_runs.py'")
+
         matching_files = find_files(folder_path, pid)
         if matching_files:
             print(f"Matching files: {matching_files}")
@@ -99,6 +100,15 @@ def get_session_info(default_session, pid_path):
 
 def get_runfile_option(session_path,pid):
     matching_files = find_runfiles(session_path, f'{pid}.')
+    if not matching_files:
+        full_command = f"{mk_runs_command} {pid}"
+        result = execute_ssh_command(full_command, set_user_command=set_user_command)
+        if result["returncode"] == 0:
+            matching_files = find_runfiles(session_path, f'{pid}.')
+            if matching_files:
+                print(f"Matching files: {matching_files}")
+            else:
+                print(f"No matching files found after running mk_runs.py")
     return [{'label': label, 'value': f'{session_path}/{label}'} for label in matching_files]
 
 def get_session_list(default_session, pid_path,pid):

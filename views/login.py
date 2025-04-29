@@ -80,8 +80,6 @@ def login_state(n_clicks, pid, password, is_open, data):
         user = User.query.filter_by(username=pid).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            if user.username == 'admin':
-                return f'{prefix}admin', '', False, data, ''
             # Initialize data if None
             if data is None:
                 data = {}
@@ -92,6 +90,8 @@ def login_state(n_clicks, pid, password, is_open, data):
                 'source': source
             })
 
+            if user.username == 'admin':
+                return f'{prefix}admin', '', False, data, ''
             # Successful login, redirect to project page
             return f'{prefix}project/{pid}', '', False, data, ''
         else:

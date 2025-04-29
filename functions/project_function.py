@@ -104,6 +104,7 @@ def get_runfile_option(session_path,pid):
         print(f"No matching files found. Running 'mk_runs.py'")
         full_command = f"{mk_runs_command} {pid}"
         result = execute_ssh_command(full_command, set_user_command=set_user_command)
+        print(f"mk_runs.py result: {result}")
         if result["returncode"] == 0:
             matching_files = find_runfiles(session_path, f'{pid}.')
             if matching_files:

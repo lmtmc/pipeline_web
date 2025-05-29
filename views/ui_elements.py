@@ -178,6 +178,16 @@ session_layout = html.Div(
         html.Div(
             dcc.ConfirmDialog(id=Session.CONFIRM_DEL.value, message='')
         ),
+
+        html.Br(),
+        # Add git pull button
+        dbc.Button(
+            [html.I(className='fas fa-sync-alt me-2'), "Project Updates"],
+            id='git-pull-btn',
+            color='info',
+            className='mb-3 w-100'
+        ),
+        html.Div(id='git-pull-status', className='mt-2'),
     ],
     id='session-list-display',
     className='session-list-display'

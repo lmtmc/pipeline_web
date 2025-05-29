@@ -15,4 +15,8 @@ ssh:
 pipeline_user:
   username: pipeline_web
 
+github:
+  api_url: https://api.github.com/orgs/lmtoy/repos
+  repo_prefix: lmtoy_
+
 

@@ -39,7 +39,6 @@ layout = html.Div(
         dbc.Row([
             dbc.Col([
                 ui.session_layout,
-                html.Br(),
             ],width=2,),
             dbc.Col(ui.runfile_layout, width=10),
         ], className='mb-3'),
@@ -1149,3 +1148,32 @@ def disable_submit_job_button(selected_runfile):
     if not finished:
         return True
     return False
+# Add git pull callback
+@app.callback(
+    Output('git-pull-status', 'children'),
+    Input('git-pull-btn', 'n_clicks'),
+    State('data-store', 'data'),
+    prevent_initial_call=True
+)
+def handle_git_pull(n_clicks,data):
+    if not n_clicks:
+        raise PreventUpdate
+        # Check if data exists and has the required 'pid' key
+    if not data or 'pid' not in data:
+        return dbc.Alert('Session data not found. Please refresh the page.',
+                         color='danger', dismissable=True)
+
+    default_pid_path = f'{default_session_prefix}{data["pid"]}'
+
+    try:
+        success, message = pf.execute_git_pull(default_pid_path)
+
+        if success:
+            return dbc.Alert(message, color='success', dismissable=True)
+        else:
+            return dbc.Alert(message, color='danger', dismissable=True)
+
+    except Exception as e:
+        print(f"Error executing git pull: {str(e)}")
+        return dbc.Alert(f'An error occurred: {str(e)}',
+                         color='danger', dismissable=True)

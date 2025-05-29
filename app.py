@@ -3,7 +3,7 @@ import os
 import argparse
 from flask import session
 from flask_login import logout_user, current_user
-
+import dash_bootstrap_components as dbc
 # Third-party imports
 from dash import dcc, html, Input, Output, State
 
@@ -39,6 +39,7 @@ def create_layout():
     """Create the main application layout."""
     return html.Div(
         [
+
             html.Div(id='navbar-container'),
             html.Br(),
             html.Div(id='body-content', className='content-container'),

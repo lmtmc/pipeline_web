@@ -64,7 +64,8 @@ def find_files(folder_path, prefix):
                 os.path.isfile(file_path) and
                 filename.startswith(prefix) and
                 not (filename.endswith('.jobid') or
-                     filename.endswith('x')) and
+                     filename.endswith('x') or
+                     filename.endswith('.sh')) and
                 os.path.getsize(file_path) > 0  # Check if file has content
         ):
             filtered_files.append(filename)
@@ -630,3 +631,40 @@ def get_parameter_info(url):
             parameters[current_section][param_name.strip()] = param_desc.strip()
 
     return parameters
+
+def execute_git_pull(project_path):
+    """Execute git pull in the project directory and return status."""
+    try:
+        # Store the current working directory
+        current_dir = os.getcwd()
+        
+        try:
+            # Change to project directory
+            os.chdir(project_path)
+            
+            # Execute git pull
+            result = subprocess.run(['git', 'pull'], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                # Format the success message
+                #message = f"Repository: {os.path.basename(project_path)}\n"
+                message = "Status: Success\n"
+                message += "Output:\n" + result.stdout
+                return True, message
+            else:
+                # Format the error message
+                #message = f"Repository: {os.path.basename(project_path)}\n"
+                message = "Status: Failed\n"
+                message += "Error:\n" + result.stderr
+                return False, message
+        finally:
+            # Always change back to the original directory
+            os.chdir(current_dir)
+    except Exception as e:
+        # Format the exception message
+        #message = f"Repository: {os.path.basename(project_path)}\n"
+        message = "Status: Error\n"
+        message += f"Exception: {str(e)}"
+        return False, message
+
+    

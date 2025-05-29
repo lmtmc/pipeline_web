@@ -10,7 +10,7 @@ from dash.exceptions import PreventUpdate
 import subprocess
 import logging
 from db.users_mgt import get_project_credentials, update_project_credentials
-from functions.github_utils import get_github_repos, clone_or_pull_repo
+from functions.github_utils import get_github_repos, clone_or_pull_repo, update_single_repo
 from functions.ui_utils import get_projects_list
 
 from config_loader import load_config
@@ -280,8 +280,7 @@ def handle_profile_modal(active_cell, close_clicks, table_data, page_current, pa
 
             # Get current credentials
             creds = get_project_credentials(pid)
-            print('pid', pid)
-            print('creds', creds)
+            
             project_info = html.Div([
                 html.H5(f"Project: {pid}", className='text-primary'),
                 html.P(f"Email: {creds['email'] or 'Not set'}", className='text-muted'),
@@ -374,6 +373,8 @@ def handle_updates(n_clicks, active_cell):
         for repo in repos:
             if clone_or_pull_repo(repo, target_dir):
                 success_count += 1
+        
+        # Get fresh project list after updates
         df = get_projects_list(folder_path, REPO_PREFIX)
         message = f"Successfully updated {success_count} repositories. Total projects: {len(df)}"
         return df.to_dict('records'), message, True
@@ -382,17 +383,13 @@ def handle_updates(n_clicks, active_cell):
         df = pd.DataFrame(get_projects_list(folder_path, REPO_PREFIX))
         if active_cell['row'] < len(df):
             pid = df.iloc[active_cell['row']]['Project ID']
-            project_name = f"lmtoy_{pid}"
-            project_path = os.path.join(target_dir, project_name)
-
-            try:
-                if os.path.exists(project_path):
-                    subprocess.run(['git', 'pull'], cwd=project_path, check=True)
-                    df = get_projects_list(folder_path, REPO_PREFIX)
-                    message = f"Successfully updated project {pid}"
-                    return df.to_dict('records'), message, True
-            except subprocess.CalledProcessError as e:
-                message = f"Error updating project {pid}: {str(e)}"
+            success, message = update_single_repo(pid, target_dir)
+            
+            if success:
+                # Get fresh project list after update
+                df = get_projects_list(folder_path, REPO_PREFIX)
+                return df.to_dict('records'), message, True
+            else:
                 return dash.no_update, message, True
 
     raise PreventUpdate

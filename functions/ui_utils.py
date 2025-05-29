@@ -15,32 +15,38 @@ def get_projects_list(folder_path, repo_prefix):
 
         projects = []
         for item in os.listdir(target_dir):
-            if item.startswith(repo_prefix):
-                project_path = os.path.join(target_dir, item)
-                if os.path.isdir(project_path):
-                    # Get last modified time
-                    mtime = os.path.getmtime(project_path)
-                    last_modified = datetime.fromtimestamp(mtime)
+            # Skip if not a valid project directory
+            if not (item.startswith(repo_prefix) and 
+                   item not in ['lmtoy_run', 'lmtoy_test']):
+                continue
+                
+            project_path = os.path.join(target_dir, item)
+            if not os.path.isdir(project_path):
+                continue
 
-                    # Get project ID
-                    pid = item.replace(repo_prefix, '')
+            # Get project ID
+            pid = item.replace(repo_prefix, '')
 
-                    # Get GitHub URL
-                    github_url = f"https://github.com/lmtoy/{item}"
+            # Get last modified time
+            mtime = os.path.getmtime(project_path)
+            last_modified = datetime.fromtimestamp(mtime)
 
-                    # Check if credentials exist
-                    creds = get_project_credentials(pid)
-                    profile_status = "Set" if creds['email'] or creds['password'] else "Not Set"
+            # Get GitHub URL
+            github_url = f"https://github.com/lmtoy/{item}"
 
-                    projects.append({
-                        'No.': len(projects) + 1,
-                        'Project ID': pid,
-                        'Last Modified': last_modified,
-                        'GitHub': f'<a href="{github_url}" target="_blank">View</a>',
-                        'View/Edit': 'View/Edit',
-                        'Update': 'Update',
-                        'Profile': profile_status
-                    })
+            # Check if credentials exist
+            creds = get_project_credentials(pid)
+            profile_status = "Set" if creds['email'] or creds['password'] else "Not Set"
+
+            projects.append({
+                'No.': len(projects) + 1,
+                'Project ID': pid,
+                'Last Modified': last_modified,
+                'GitHub': f'<a href="{github_url}" target="_blank">View</a>',
+                'View/Edit': 'View/Edit',
+                'Update': 'Update',
+                'Profile': profile_status
+            })
 
         df = pd.DataFrame(projects)
         if not df.empty:

@@ -503,6 +503,8 @@ def get_obsnum_options(source, selected_rows, data):
     # get the obsnum options from data_store based on the source value
 
     obsnum_options = data.get('source', {}).get(source)
+    if obsnum_options is None:
+        obsnum_options = []  # Return empty list if no options found
     obsnum_dropdown_options = [{'label': str(o), 'value': str(o)} for o in obsnum_options]
 
     # Extract and process obsnum values from selected rows

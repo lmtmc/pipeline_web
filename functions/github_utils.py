@@ -14,7 +14,20 @@ def get_github_repos(api_url, repo_prefix):
         response = requests.get(api_url)
         response.raise_for_status()
         repos = response.json()
-        return [repo['name'] for repo in repos if repo['name'].startswith(repo_prefix)]
+        
+        # Filter repositories:
+        # 1. Must start with repo_prefix
+        # 2. Must not be a test repository
+        # 3. Must be a valid project repository (contains valid project ID format)
+        valid_repos = []
+        for repo in repos:
+            name = repo['name']
+            if (name.startswith(repo_prefix) and 
+                'test' not in name.lower() and 
+                len(name.replace(repo_prefix, '')) > 0):  # Ensure there's a project ID after the prefix
+                valid_repos.append(name)
+        
+        return valid_repos
     except Exception as e:
         logger.error(f"Error fetching GitHub repositories: {str(e)}")
         return []

@@ -259,11 +259,13 @@ def handle_view_edit(active_cell, table_data):
     ],
     [
         State('projects-table', 'data'),
+        State('projects-table', 'page_current'),
+        State('projects-table', 'page_size'),
         State('profile-modal', 'is_open'),
     ],
     prevent_initial_call=True
 )
-def handle_profile_modal(active_cell, close_clicks, table_data, is_open):
+def handle_profile_modal(active_cell, close_clicks, table_data, page_current, page_size, is_open):
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
     if trigger_id == 'close-modal-btn':
@@ -271,12 +273,15 @@ def handle_profile_modal(active_cell, close_clicks, table_data, is_open):
 
     if trigger_id == 'projects-table' and active_cell and active_cell['column_id'] == 'Profile':
         try:
-            row_data = table_data[active_cell['row']]
+            # Calculate the actual row index considering pagination
+            actual_row = active_cell['row'] + (page_current * page_size)
+            row_data = table_data[actual_row]
             pid = row_data['Project ID']
 
             # Get current credentials
             creds = get_project_credentials(pid)
-
+            print('pid', pid)
+            print('creds', creds)
             project_info = html.Div([
                 html.H5(f"Project: {pid}", className='text-primary'),
                 html.P(f"Email: {creds['email'] or 'Not set'}", className='text-muted'),

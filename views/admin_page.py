@@ -7,11 +7,11 @@ from my_server import app
 from flask_login import logout_user, current_user
 import pandas as pd
 from dash.exceptions import PreventUpdate
-import requests
 import subprocess
-from functools import lru_cache
 import logging
-import sqlite3
+from db.users_mgt import get_project_credentials, update_project_credentials
+from functions.github_utils import get_github_repos, clone_or_pull_repo
+from functions.ui_utils import get_projects_list
 
 from config_loader import load_config
 
@@ -40,151 +40,11 @@ GITHUB_API_URL = config.get('github', {}).get('api_url', 'https://api.github.com
 REPO_PREFIX = config.get('github', {}).get('repo_prefix', 'lmtoy_')
 
 DB_PATH = "instance/users.db"
-print(f"DB_PATH: {DB_PATH}")
-# Cache the GitHub API response for 5 minutes
-@lru_cache(maxsize=1)
-def get_github_repos():
-    """Get list of repositories from lmtoy GitHub organization with caching."""
-    try:
-        all_repos = []
-        page = 1
-        per_page = 100
-
-        while True:
-            response = requests.get(
-                GITHUB_API_URL,
-                params={'page': page, 'per_page': per_page},
-                timeout=10
-            )
-
-            if response.status_code != 200:
-                logger.error(f"Error fetching GitHub repos: {response.status_code}")
-                break
-
-            repos = response.json()
-            if not repos:
-                break
-
-            all_repos.extend([repo['name'] for repo in repos if repo['name'].startswith(REPO_PREFIX)])
-            page += 1
-
-            if len(repos) < per_page:
-                break
-
-        logger.info(f"Found {len(all_repos)} repositories")
-        return all_repos
-    except Exception as e:
-        logger.error(f"Error fetching GitHub repos: {e}")
-        return []
-
-def get_project_credentials(pid):
-    """Get both password and email for a project in one query."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute('SELECT password, email FROM user WHERE username = ?', (pid,))
-        result = cursor.fetchone()
-        conn.close()
-        if result:
-            return {'password': result[0], 'email': result[1]}
-        return {'password': None, 'email': None}
-    except Exception as e:
-        logger.error(f"Error reading credentials for project {pid}: {e}")
-        return {'password': None, 'email': None}
-
-
-def update_project_credentials(pid, password=None, email=None):
-    """Update password and/or email for a project."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        # Get current credentials
-        current_creds = get_project_credentials(pid)
-
-        # Use current values if new ones not provided
-        new_password = password if password is not None else current_creds['password']
-        new_email = email if email is not None else current_creds['email']
-
-        # Check if user exists
-        cursor.execute('SELECT 1 FROM user WHERE username = ?', (pid,))
-        exists = cursor.fetchone()
-
-        if exists:
-            cursor.execute('''
-                UPDATE user 
-                SET password = ?, email = ?
-                WHERE username = ?
-            ''', (new_password, new_email, pid))
-        else:
-            cursor.execute('''
-                INSERT INTO user (username, password, email, is_admin)
-                VALUES (?, ?, ?, 0)
-            ''', (pid, new_password, new_email))
-
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        logger.error(f"Error updating credentials for project {pid}: {e}")
-        return False
-
-
-def get_projects_list(folder_path):
-    """Get list of projects from a folder path with error handling."""
-    try:
-        if not os.path.exists(folder_path):
-            logger.warning(f"Folder path does not exist: {folder_path}")
-            return pd.DataFrame()
-
-        folder_path = os.path.join(folder_path, 'lmtoy_run')
-        if not os.path.exists(folder_path):
-            logger.warning(f"lmtoy_run folder does not exist: {folder_path}")
-            return pd.DataFrame()
-
-        projects = [d for d in os.listdir(folder_path)
-                    if os.path.isdir(os.path.join(folder_path, d))]
-
-        project_details = []
-        for project in projects:
-            if project.startswith(REPO_PREFIX):
-                try:
-                    pid = project.split('_')[1]
-                    project_path = os.path.join(folder_path, project)
-                    modified_time = datetime.fromtimestamp(os.path.getmtime(project_path))
-                    github_url = f"[GitHub](https://github.com/lmtoy/{project})"
-
-                    # Check if credentials exist
-                    creds = get_project_credentials(pid)
-                    profile_status = "👤 Set" if creds['password'] else "👤 Not Set"
-
-                    project_details.append({
-                        'Project ID': pid,
-                        'Last Modified': modified_time.strftime('%Y-%m-%d %H:%M:%S'),
-                        'GitHub': github_url,
-                        'View/Edit': '📝 View/Edit',
-                        'Update': '🔄 Update',
-                        'Profile': profile_status
-                    })
-                except Exception as e:
-                    logger.error(f"Error processing project {project}: {e}")
-                    continue
-
-        df = pd.DataFrame(project_details)
-        if not df.empty:
-            df = df.sort_values('Last Modified', ascending=False)
-            df.insert(0, 'No.', range(1, len(df) + 1))
-        return df
-
-    except Exception as e:
-        logger.error(f"Error getting projects list: {e}")
-        return pd.DataFrame()
-
 
 def create_layout():
     """Create the admin page layout with optimized styling."""
     folder_path = config.get('path', {}).get('work_lmt', '')
-    df = get_projects_list(folder_path)
+    df = get_projects_list(folder_path, REPO_PREFIX)
 
     return html.Div([
         # Store for current project ID and modal state
@@ -193,20 +53,17 @@ def create_layout():
                   is_open=False,
                   dismissable=True,
                   duration=4500),
-        dbc.Alert(id='profile-alert',
-                  is_open=False,
-                  dismissable=True,
-                  duration=4500,
-                  style={
-                      'position': 'fixed',
-                      'top': '20px',
-                      'right': '20px',
-                      'zIndex': 9999,
-                      'minWidth': '300px'
-                  }),
         dbc.Modal([
             dbc.ModalHeader("Project Profile Management"),
             dbc.ModalBody([
+                dbc.Alert(id='profile-alert',
+                         is_open=False,
+                         dismissable=True,
+                         duration=4500,
+                         style={
+                             'marginBottom': '20px',
+                             'width': '100%'
+                         }),
                 html.Div(id='modal-project-info'),
                 html.Hr(),
                 html.Div([
@@ -367,7 +224,7 @@ def create_layout():
     ], className='projects-container')
 
 
-#Simplified callback for View/Edit functionality
+
 @callback(
     [Output('url', 'pathname'), Output('admin-alert', 'children'), Output('admin-alert', 'is_open')],
     Input('projects-table', 'active_cell'),
@@ -408,7 +265,6 @@ def handle_view_edit(active_cell, table_data):
 )
 def handle_profile_modal(active_cell, close_clicks, table_data, is_open):
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    print('trigger_id', trigger_id)
 
     if trigger_id == 'close-modal-btn':
         return False, None, ""
@@ -452,18 +308,15 @@ def save_profile(n_clicks, pid, email_value, password_value, confirm_password_va
     if not n_clicks or not pid:
         raise PreventUpdate
 
-    # Handle password update if provided
-    if password_value or confirm_password_value:
-        if not password_value or not confirm_password_value:
-            return "Please enter both password fields", True
-        if password_value != confirm_password_value:
-            return "Passwords do not match", True
+    logger.info(f"Attempting to update credentials for project {pid}")
+    logger.info(f"Email value: {email_value}")
+    logger.info(f"Password value: {'Set' if password_value else 'Not set'}")
 
     # Update credentials
-    if update_project_credentials(pid, email=email_value, password=password_value):
-        return f"Profile updated successfully for project {pid}", True
-    else:
-        return "Error updating profile", True
+    success, message = update_project_credentials(pid, email=email_value, password=password_value, confirm_password=confirm_password_value)
+    
+    logger.info(f"Update result - Success: {success}, Message: {message}")
+    return message, True
 
 
 # Password visibility toggle
@@ -474,6 +327,16 @@ def save_profile(n_clicks, pid, email_value, password_value, confirm_password_va
     prevent_initial_call=True
 )
 def toggle_password_visibility(n_clicks, current_type):
+    return 'text' if current_type == 'password' else 'password'
+
+# Confirm password visibility toggle
+@callback(
+    Output('confirm-password-input', 'type'),
+    Input('toggle-confirm-password-btn', 'n_clicks'),
+    State('confirm-password-input', 'type'),
+    prevent_initial_call=True
+)
+def toggle_confirm_password_visibility(n_clicks, current_type):
     return 'text' if current_type == 'password' else 'password'
 
 
@@ -491,28 +354,27 @@ def toggle_password_visibility(n_clicks, current_type):
     prevent_initial_call=True
 )
 def handle_updates(n_clicks, active_cell):
-
     if not ctx.triggered:
         raise PreventUpdate
 
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    print('trigger_id in handle_updates:', trigger_id)
+    
     folder_path = config.get('path', {}).get('work_lmt', '')
     target_dir = os.path.join(folder_path, 'lmtoy_run')
 
     if trigger_id == 'update-projects-btn':
         os.makedirs(target_dir, exist_ok=True)
-        repos = get_github_repos()
+        repos = get_github_repos(GITHUB_API_URL, REPO_PREFIX)
         success_count = 0
         for repo in repos:
             if clone_or_pull_repo(repo, target_dir):
                 success_count += 1
-        df = get_projects_list(folder_path)
+        df = get_projects_list(folder_path, REPO_PREFIX)
         message = f"Successfully updated {success_count} repositories. Total projects: {len(df)}"
         return df.to_dict('records'), message, True
 
     elif trigger_id == 'projects-table' and active_cell and active_cell['column_id'] == 'Update':
-        df = pd.DataFrame(get_projects_list(folder_path))
+        df = pd.DataFrame(get_projects_list(folder_path, REPO_PREFIX))
         if active_cell['row'] < len(df):
             pid = df.iloc[active_cell['row']]['Project ID']
             project_name = f"lmtoy_{pid}"
@@ -521,7 +383,7 @@ def handle_updates(n_clicks, active_cell):
             try:
                 if os.path.exists(project_path):
                     subprocess.run(['git', 'pull'], cwd=project_path, check=True)
-                    df = get_projects_list(folder_path)
+                    df = get_projects_list(folder_path, REPO_PREFIX)
                     message = f"Successfully updated project {pid}"
                     return df.to_dict('records'), message, True
             except subprocess.CalledProcessError as e:
@@ -529,38 +391,5 @@ def handle_updates(n_clicks, active_cell):
                 return dash.no_update, message, True
 
     raise PreventUpdate
-
-
-def clone_or_pull_repo(repo_name, target_dir):
-    """Clone or pull a repository with improved error handling."""
-    repo_url = f"https://github.com/lmtoy/{repo_name}.git"
-    repo_path = os.path.join(target_dir, repo_name)
-
-    try:
-        if os.path.exists(repo_path):
-            result = subprocess.run(
-                ['git', 'pull'],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            logger.info(f"Successfully pulled {repo_name}")
-        else:
-            result = subprocess.run(
-                ['git', 'clone', repo_url, repo_path],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            logger.info(f"Successfully cloned {repo_name}")
-        return True
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error with git operation for {repo_name}: {e.stderr}")
-        return False
-    except Exception as e:
-        logger.error(f"Unexpected error with {repo_name}: {e}")
-        return False
-
 
 layout = create_layout()

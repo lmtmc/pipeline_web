@@ -4,10 +4,8 @@ import os
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from my_server import server, db, User, Job
-from datetime import datetime
+from my_server import server, db, User, generate_password_hash
 import re
-import getpass
 
 def validate_email(email):
     """Validate email format."""
@@ -399,6 +397,105 @@ def list_all_users():
                 print(f"{user.username:<20} {user.email:<30} {'Yes' if user.is_admin else 'No'}")
     except Exception as e:
         print(f"Error listing users: {e}")
+
+def get_project_credentials(pid):
+    """Get both password and email for a project in one query."""
+    try:
+        user = check_user(pid)
+        if user:
+            return {'password': user.password, 'email': user.email}
+        return {'password': None, 'email': None}
+    except Exception as e:
+        print(f"Error reading credentials for project {pid}: {e}")
+        return {'password': None, 'email': None}
+
+def update_project_credentials(pid, password=None, confirm_password=None, email=None):
+    """Update password and/or email for a project."""
+    try:
+        with server.app_context():
+            user = check_user(pid)
+            if not user:
+                # If user doesn't exist, create new user with whatever credentials are provided
+                if not password and not email:
+                    return False, f"Error: At least one of password or email is required for new project {pid}"
+                # Use default values for missing credentials
+                new_password = password if password else "default_password"
+                if not email:
+                    return False, f"Error: Email is required for new project {pid}"
+                if add_user(pid, new_password, email, is_admin=False):
+                    return True, f"Successfully created new project {pid}"
+                return False, f"Failed to create new project {pid}"
+
+            # Store original values for verification
+            original_email = user.email
+            print(f"Original email: {original_email}")
+
+            # If user exists, update their information
+            if email:  # Only validate and update if new email is provided
+                if not validate_email(email):
+                    return False, f"Invalid email format for project {pid}"
+                print(f"Updating email from {original_email} to {email}")
+                user.email = email
+                # Force the change to be tracked
+                db.session.add(user)
+            elif not user.email:  # If no email provided and no existing email
+                return False, f"Error: No email found for project {pid}"
+
+            if password:
+                if len(password) < 6:
+                    return False, "Password must be at least 6 characters long"
+                if password != confirm_password:
+                    return False, "Passwords do not match"
+                print(f"Updating password for project {pid}")
+                # Hash the password before storing it
+                user.password = generate_password_hash(password, method='pbkdf2:sha256')
+                # Force the change to be tracked
+                db.session.add(user)
+
+            print("Committing changes to database...")
+            try:
+                db.session.flush()  # Flush changes to ensure they're tracked
+                db.session.commit()
+                print("Changes committed successfully")
+            except Exception as commit_error:
+                print(f"Error during commit: {commit_error}")
+                db.session.rollback()
+                return False, f"Error committing changes: {str(commit_error)}"
+
+            # Verify the updates were successful
+            db.session.refresh(user)  # Refresh the user object from the database
+            if not user:
+                print(f"Error: Could not find user {pid} after update")
+                return False, f"Error: Could not verify updates for project {pid}"
+
+            # Check email update
+            if email:
+                print(f"Verifying email update - Expected: {email}, Got: {user.email}")
+                if user.email != email:
+                    print(f"Email verification failed - Expected: {email}, Got: {user.email}")
+                    return False, f"Error: Email update failed for project {pid}"
+
+            # Check password update
+            if password:
+                print("Verifying password update...")
+                # Get a fresh user object to verify password
+                verify_user = check_user(pid)
+                if not verify_user:
+                    print("Could not find user for password verification")
+                    return False, f"Error: Could not verify password update for project {pid}"
+                
+                if not verify_user.check_password(password):
+                    print("Password verification failed - stored hash does not match")
+                    return False, f"Error: Password update failed for project {pid}"
+                print("Password verification successful")
+
+            print("All verifications passed successfully")
+            return True, f"Successfully updated project {pid} credentials"
+
+    except Exception as e:
+        print(f"Error updating credentials for project {pid}: {e}")
+        db.session.rollback()
+        return False, f"Error updating credentials for project {pid}: {str(e)}"
 
 if __name__ == '__main__':
     # Create initial admin user if no users exist

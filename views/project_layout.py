@@ -1013,7 +1013,7 @@ def toggle_parameter_help(n_clicks, current_style):
         Output('runfile-table', 'rowData',allow_duplicate=True),
         Output('runfile-table', 'columnDefs',allow_duplicate=True),
         Output('runfile-content-title', 'children',allow_duplicate=True),
-        Output('runfile-content-display', 'style'),
+        Output(Runfile.CONTENT_DISPLAY.value, 'style'),
     ],
     [
         Input(Session.SESSION_LIST.value, 'active_item'),

@@ -43,7 +43,7 @@ class Runfile(Enum):
     SAVE_CLONE_RUNFILE_BTN = 'save-clone-runfile'
     SAVE_CLONE_RUNFILE_STATUS = 'save-clone-runfile-status'
     CLONE_RUNFILE_MODAL = 'clone-runfile-modal'
-    CONTENT_DISPLAY = 'parameter'
+    CONTENT_DISPLAY = 'runfile-content-display'
     NAME_INPUT = 'clone-input'
     STATUS = 'submit-job-status'
     SAVE_TEXT = 'save-text'

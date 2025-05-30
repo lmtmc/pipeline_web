@@ -2,7 +2,7 @@ from dash import dcc, html, Output, State, dash_table, dcc
 import dash_bootstrap_components as dbc
 from dash_ag_grid import AgGrid
 from flask_login import current_user
-from functions import project_function as pf
+from utils import project_function as pf
 from enum import Enum
 from config_loader import load_config
 try :

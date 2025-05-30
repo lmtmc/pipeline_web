@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import argparse
+import logging
 from flask import session
 from flask_login import logout_user, current_user
 import dash_bootstrap_components as dbc
@@ -11,13 +12,23 @@ from dash import dcc, html, Input, Output, State
 from my_server import app
 from views import login, help, ui_elements as ui, admin_page, project_layout
 from config_loader import load_config
-from functions import project_function as pf
+from utils import project_function as pf
+
+# Configure logging
+logging.basicConfig(
+    level=logging.WARNING,  # Change to WARNING to reduce output
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Load configuration
 try:
     config = load_config()
 except Exception as e:
-    print(f"Error loading configuration: {e}")
+    logger.error(f"Error loading configuration: {e}")
     config = {}
 
 # Constants
@@ -39,7 +50,6 @@ def create_layout():
     """Create the main application layout."""
     return html.Div(
         [
-
             html.Div(id='navbar-container'),
             html.Br(),
             html.Div(id='body-content', className='content-container'),
@@ -107,7 +117,7 @@ def update_page(pathname, data):
             source = pf.get_source(pid)
             data['source'] = source
         except Exception as e:
-            print(f"Error getting source for PID {pid}: {str(e)}")
+            logger.error(f"Error getting source for PID {pid}: {str(e)}")
         
         return navbar, project_layout.layout, data
     
@@ -133,10 +143,15 @@ def main():
     args = parser.parse_args()
 
     try:
-        app.server.run(port=args.port, debug=True)
+        # Get the absolute path of the current directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Change to the current directory
+        os.chdir(current_dir)
+        # Run the server
+        app.server.run(port=args.port, debug=False)  # Set debug to False
     except Exception as e:
-        print(f"Error: {e}")
-        app.server.run(port=args.port, debug=True)
+        logger.error(f"Error: {e}")
+        app.server.run(port=args.port, debug=False)  # Set debug to False
 
 if __name__ == '__main__':
     main()

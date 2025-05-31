@@ -450,11 +450,6 @@ runfile_layout = html.Div([
     html.Div(id=Runfile.CONTENT_TITLE.value, className='runfile-title'),
     html.Div(id=Runfile.CONTENT_DISPLAY.value, style={'display': 'none'}, children=[
         html.Div([
-            dbc.Label("Runfile Notes:", className="mb-2"),
-            dbc.Textarea(id='runfile-notes', placeholder='Enter any notes about this runfile',
-                        className="mb-3",
-                        style={'height': '100px'}
-            ),
             AgGrid(
                 id='runfile-table',
                 className='ag-theme-alpine',

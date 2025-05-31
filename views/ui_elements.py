@@ -437,6 +437,8 @@ runfile_layout = html.Div([
     dbc.Row([
         dbc.Col([
             html.H5('RUNFILE LIST', id='runfile-list-title', className='title-link'),
+        ], width='auto'),
+        dbc.Col([
             dbc.ButtonGroup([
                 dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, color='secondary',
                            className='btn-icon'),

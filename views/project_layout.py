@@ -240,12 +240,19 @@ def show_confirm_submit(n_clicks, cancel_clicks, confirm_clicks, data):
     State('data-store', 'data'),
     prevent_initial_call=True
 )
-def submit_job(n_clicks, selected_runfile, session, email, data):
+def submit_job(n_clicks, selected_runfile, session, email, data_store):
+    if not n_clicks:
+        raise PreventUpdate
+        
     selected_runfile = next((value for value in selected_runfile if value), None)
+    if not selected_runfile:
+        return dbc.Alert("No runfile selected.", color="warning", dismissable=True)
+        
     runfile_name = os.path.basename(selected_runfile)
     if not email:
         return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True)
-        # Prepare confirmation message
+        
+    # Prepare confirmation message
     confirmation_message = dbc.Alert(
         [
             html.Strong(f"Job Submitted: "),
@@ -256,12 +263,14 @@ def submit_job(n_clicks, selected_runfile, session, email, data):
         color="success",
         dismissable=True
     )
-    # step 2: Submit the job
+    
+    # Submit the job
     try:
-        Thread(target=pf.process_job_submission, args=(data['pid'], selected_runfile, session, email)).start()
+        Thread(target=pf.process_job_submission, args=(data_store['pid'], selected_runfile, session, email)).start()
     except Exception as e:
         logging.error(f"Error submitting job: {str(e)}")
         return dbc.Alert(f"Error submitting job: {str(e)}", color="danger", dismissable=True)
+        
     return confirmation_message
 
 @app.callback(

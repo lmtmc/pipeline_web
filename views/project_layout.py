@@ -120,8 +120,12 @@ def update_session_display(n1, n2, n3, active_session, name, data):
                 message = "Please enter a session name."
             else:
                 message, modal_open = pf.save_session(pid_path, name)
-                session_list = pf.get_session_list(init_session, pid_path, data['pid'])
-                active_session = f'Session-{name}' if "Successfully" in message else active_session
+                if "Successfully" in message:
+                    session_list = pf.get_session_list(init_session, pid_path, data['pid'])
+                    active_session = f'Session-{name}'
+                else:
+                    active_session = active_session
+
         # handle delete session
         elif triggered_id == Session.CONFIRM_DEL.value:
             message = pf.delete_session(pid_path, active_session)
@@ -1152,4 +1156,78 @@ def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_mod
 #     if not finished:
 #         return True
 #     return False
+
+@app.callback(
+    Output('runfile-notes', 'value'),
+    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    State('data-store', 'data'),
+    prevent_initial_call=True
+)
+def load_runfile_notes(selected_runfile, data):
+    if not selected_runfile:
+        raise PreventUpdate
+        
+    current_runfile = next((value for value in selected_runfile if value), None)
+    if not current_runfile:
+        return ''
+        
+    # Try to load notes from the notes file
+    notes_file = f"{current_runfile}.notes"
+    try:
+        if os.path.exists(notes_file):
+            with open(notes_file, 'r') as f:
+                return f.read()
+    except Exception as e:
+        logging.error(f"Error loading runfile notes: {str(e)}")
+    return ''
+
+@app.callback(
+    Output('runfile-notes', 'value', allow_duplicate=True),
+    Input('runfile-notes', 'value'),
+    State({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    prevent_initial_call=True
+)
+def save_runfile_notes(notes, selected_runfile):
+    if not selected_runfile:
+        raise PreventUpdate
+        
+    current_runfile = next((value for value in selected_runfile if value), None)
+    if not current_runfile:
+        return ''
+        
+    # Save notes to the notes file
+    notes_file = f"{current_runfile}.notes"
+    try:
+        with open(notes_file, 'w') as f:
+            f.write(notes if notes else '')
+    except Exception as e:
+        logging.error(f"Error saving runfile notes: {str(e)}")
+        
+    return notes
+
+# Add a callback to save notes when the runfile is saved
+@app.callback(
+    Output('runfile-notes', 'value', allow_duplicate=True),
+    Input('runfile-table', 'rowData'),
+    State({'type': 'runfile-radio', 'index': ALL}, 'value'),
+    State('runfile-notes', 'value'),
+    prevent_initial_call=True
+)
+def save_notes_on_runfile_save(row_data, selected_runfile, notes):
+    if not selected_runfile:
+        raise PreventUpdate
+        
+    current_runfile = next((value for value in selected_runfile if value), None)
+    if not current_runfile:
+        return ''
+        
+    # Save notes to the notes file
+    notes_file = f"{current_runfile}.notes"
+    try:
+        with open(notes_file, 'w') as f:
+            f.write(notes if notes else '')
+    except Exception as e:
+        logging.error(f"Error saving runfile notes: {str(e)}")
+        
+    return notes
 

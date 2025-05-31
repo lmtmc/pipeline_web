@@ -55,24 +55,19 @@ layout = html.Div(
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
         Output('save-filter-btn', 'style'),
-        Output('data-store', 'data'),
     ],
     Input(Session.SESSION_LIST.value, 'active_item'),
-    State('data-store', 'data'),
 )
-def default_session(active_session, data_store):
-    # Update the selected session in the data store
-    data_store['selected_session'] = active_session
-
+def default_session(active_session):
     if active_session is None:
         # Hide all buttons if no session is selected
-        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE,data_store
+        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE
 
     if active_session == init_session:
         # Hide delete buttons and show only the new session button for the default session
-        return HIDE_STYLE, SHOW_STYLE, HIDE_STYLE,data_store
+        return HIDE_STYLE, SHOW_STYLE, HIDE_STYLE
 
-    return SHOW_STYLE, HIDE_STYLE, SHOW_STYLE,data_store
+    return SHOW_STYLE, HIDE_STYLE, SHOW_STYLE
 
 
 # update session list when modifying session
@@ -88,14 +83,13 @@ def default_session(active_session, data_store):
         Input(Session.SAVE_BTN.value, 'n_clicks'),
         Input(Session.CONFIRM_DEL.value, 'submit_n_clicks'),
         Input(Session.SESSION_LIST.value, 'active_item'),
-        Input('data-store', 'data'),  # Add data-store as an input to trigger on page load
     ],
     [
         State(Session.NAME_INPUT.value, 'value'),
         State('data-store', 'data')
     ],
 )
-def update_session_display(n1, n2, n3, active_session, data_store_trigger, name, data):
+def update_session_display(n1, n2, n3, active_session, name, data):
     try:
         triggered_id = ctx.triggered_id
 

@@ -1128,19 +1128,19 @@ def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_mod
         return no_update, False
     return no_update, no_update
 
-# if there is job running disable the sumbit job button
-@app.callback(
-    Output(Runfile.RUN_BTN.value, 'disabled'),
-    Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    prevent_initial_call=True
-)
-def disable_submit_job_button(selected_runfile):
-    selected_runfile = next((value for value in selected_runfile if value), None)
-    if not selected_runfile:
-        return True
-    status, finished = pf.check_runfile_job_status(selected_runfile)
-    # if the job is running, disable the submit job button
-    if not finished:
-        return True
-    return False
+# # if there is job running disable the sumbit job button
+# @app.callback(
+#     Output(Runfile.RUN_BTN.value, 'disabled'),
+#     Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+#     prevent_initial_call=True
+# )
+# def disable_submit_job_button(selected_runfile):
+#     selected_runfile = next((value for value in selected_runfile if value), None)
+#     if not selected_runfile:
+#         return True
+#     status, finished = pf.check_runfile_job_status(selected_runfile)
+#     # if the job is running, disable the submit job button
+#     if not finished:
+#         return True
+#     return False
 

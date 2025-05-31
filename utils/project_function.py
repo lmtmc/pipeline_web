@@ -334,7 +334,7 @@ def is_job_submit_successful(result):
     # If no critical errors are left, treat the job as successful
     return len(critical_errors) == 0
 
-def execute_remote_submit(pid, runfile,session):
+def execute_remote_submit(pid, runfile, session):
     # Create the full command to run remotely in the background with nohup
     full_command = f"{dispatch_command} {pid} {runfile} {session}"
     result = execute_ssh_command(full_command, set_user_command=set_user_command)
@@ -551,7 +551,7 @@ def get_next_runfile_message(runfile, session):
 
         return next_runfile, next_job_message
     return runfile, ""
-def process_job_submission(pid,selected_runfile, session,email):
+def process_job_submission(pid, selected_runfile, session, email):
     """
     Handles the job submission process asynchronously.
     """
@@ -559,7 +559,7 @@ def process_job_submission(pid,selected_runfile, session,email):
     try:
         # Simulate remote submission process (replace with actual logic)
         print(f"Submitting job for '{runfile}'...")
-        success = execute_remote_submit(pid, runfile ,session)
+        success = execute_remote_submit(pid, runfile, session)
 
         # send email notification
         if email:
@@ -576,7 +576,7 @@ def process_job_submission(pid,selected_runfile, session,email):
                 print(f"Monitoring job status for '{runfile}'...")
                 all_jobs_done = monitor_slurm_jobs(job_ids)
                 if all_jobs_done and email:
-                    next_runfile, next_job_message= get_next_runfile_message(runfile, session)
+                    next_runfile, next_job_message = get_next_runfile_message(runfile, session)
                     completion_message = f"All jobs for runfile '{runfile}' have completed. {next_job_message}"
                     send_email('Job Completion Notification', completion_message, email)
 

@@ -148,10 +148,10 @@ def main():
         # Change to the current directory
         os.chdir(current_dir)
         # Run the server
-        app.server.run(port=args.port, debug=False)  # Set debug to False
+        app.server.run(port=args.port, debug=True)  # Set debug to False
     except Exception as e:
         logger.error(f"Error: {e}")
-        app.server.run(port=args.port, debug=False)  # Set debug to False
+        app.server.run(port=args.port, debug=True)  # Set debug to False
 
 if __name__ == '__main__':
     main()

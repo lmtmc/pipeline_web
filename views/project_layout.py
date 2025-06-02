@@ -11,7 +11,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from flask_login import current_user
 from my_server import app
-from utils import project_function as pf
+from utils import project_function as pf, repo_utils as ru
 from views import ui_elements as ui
 from views.ui_elements import Session, Runfile, Table
 from config_loader import load_config
@@ -24,7 +24,7 @@ except Exception as e:
 
 prefix = config['path']['prefix']
 default_work_lmt = config['path']['work_lmt']
-
+default_lmtoy_run = os.path.join(default_work_lmt, 'lmtoy_run')
 default_session_prefix = os.path.join(default_work_lmt, 'lmtoy_run/lmtoy_')
 init_session = config['session']['init_session']
 
@@ -39,13 +39,14 @@ layout = html.Div(
             dbc.Col([
                 ui.session_layout,
                 html.Br(),
-            ],width=2,),
-            dbc.Col(ui.runfile_layout, width=10),
-        ], className='mb-3'),
+            ],width=2, className='h-100'),
+            dbc.Col(ui.runfile_layout, width=10, className='h-100'),
+        ], className='mb-3 h-100'),
         ui.job_status_layout,
         html.Div(id='parameter-edit-selector'),
         dcc.Location(id='result-location', refresh=True),
-     ]
+     ],
+     className='h-100'
 )
 
 # Hide the Delete Session for the default session and hide the clone button for other sessions
@@ -336,7 +337,7 @@ def display_confirm_dialog(n_clicks, job_id):
         Output('runfile-table', 'rowData', allow_duplicate=True),
         Output('runfile-table', 'columnDefs', allow_duplicate=True),
         Output('data-store', 'data', allow_duplicate=True),
-        Output('submit-job-confirm-text', 'children'),
+        #Output('submit-job-confirm-text', 'children'),
     ],
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
@@ -351,7 +352,7 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     current_runfile = next((value for value in selected_runfile if value), None)
 
     if not current_runfile:
-        return '', HIDE_STYLE, '','',data_store, ''
+        return '', HIDE_STYLE, '','',data_store
 
     runfile_title = pf.get_runfile_title(current_runfile, init_session)
     runfile_data,runfile_content = pf.df_runfile(current_runfile)
@@ -383,7 +384,7 @@ def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     if ctx.triggered_id == Runfile.CONFIRM_DEL_ALERT.value:
         pf.del_runfile(current_runfile)
     data_store['selected_runfile'] = current_runfile
-    return runfile_title,SHOW_STYLE, cleaned_row_data, column_defs,data_store, f"Are you sure to Submit {runfile_title}?"
+    return runfile_title,SHOW_STYLE, cleaned_row_data, column_defs,data_store
 
 # If selected rows, show the edit button else hide it
 @app.callback(
@@ -1230,4 +1231,88 @@ def save_notes_on_runfile_save(row_data, selected_runfile, notes):
         logging.error(f"Error saving runfile notes: {str(e)}")
         
     return notes
+
+# Add callback for git pull button
+@app.callback(
+    Output('git-pull-status', 'children'),
+    [Input('git-pull-btn', 'n_clicks'),
+     Input('project-updates-btn', 'n_clicks')],
+    State('data-store', 'data'),
+    prevent_initial_call=True
+)
+def handle_git_pull(git_pull_clicks, project_updates_clicks, data):
+    try:
+        pid = data.get('pid')
+        if not pid:
+            raise ValueError("Project ID (pid) not found in data store")
+
+        repo_name = f'lmtoy_{pid}'
+        triggered_id = ctx.triggered_id
+
+        if triggered_id == 'git-pull-btn':
+            # Execute git pull
+            success, message = ru.update_single_repo(repo_name, default_work_lmt)
+            if not success:
+                return dbc.Alert(
+                    [
+                        html.I(className="fas fa-exclamation-circle me-2"),
+                        "Failed to pull latest changes:",
+                        html.Br(),
+                        message
+                    ],
+                    color="danger",
+                    dismissable=True
+                )
+            return dbc.Alert(
+                [
+                    html.I(className="fas fa-check-circle me-2"),
+                    "Successfully pulled latest changes",
+                    html.Br(),
+                    message
+                ],
+                color="success",
+                dismissable=True
+            )
+        else:  # project-updates-btn
+            # Check repository status
+            success, status_msg = ru.get_single_repo_status(repo_name)
+            if not success:
+                return dbc.Alert(
+                    [
+                        html.I(className="fas fa-exclamation-circle me-2"),
+                        "Failed to check project status:",
+                        html.Br(),
+                        status_msg
+                    ],
+                    color="danger",
+                    dismissable=True
+                )
+
+            color = "success" if status_msg == "Up to date" else "warning"
+            icon = "fas fa-check-circle" if status_msg == "Up to date" else "fas fa-info-circle"
+            message = "Project is already up to date." if status_msg == "Up to date" else "Project may need updates."
+
+            return dbc.Alert(
+                [
+                    html.I(className=f"{icon} me-2"),
+                    message,
+                    html.Br(),
+                    status_msg
+                ],
+                color=color,
+                dismissable=True
+            )
+
+    except Exception as e:
+        logging.error(f"Error in git operations: {str(e)}")
+        return dbc.Alert(
+            [
+                html.I(className="fas fa-exclamation-circle me-2"),
+                "Error performing git operation:",
+                html.Br(),
+                str(e)
+            ],
+            color="danger",
+            dismissable=True
+        )
 

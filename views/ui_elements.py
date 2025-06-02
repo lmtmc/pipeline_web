@@ -183,13 +183,29 @@ session_layout = html.Div(
         ),
 
         html.Br(),
-        # Add git pull button
-        dbc.Button(
-            [html.I(className='fas fa-sync-alt me-2'), "Project Updates"],
-            id='git-pull-btn',
-            color='info',
-            className='mb-3 w-100'
-        ),
+        # Add git pull and project status buttons in the same row
+        dbc.Row([
+            dbc.Col(
+                dbc.Button(
+                    [html.I(className='fas fa-code-branch me-2'), "Git Pull"],
+                    id='git-pull-btn',
+                    color='primary',
+                    className='w-100'
+                ),
+                width=6,
+                className='pe-2'  # Add right padding
+            ),
+            dbc.Col(
+                dbc.Button(
+                    [html.I(className='fas fa-sync-alt me-2'), "Project Status"],
+                    id='project-updates-btn',
+                    color='info',
+                    className='w-100'
+                ),
+                width=6,
+                className='ps-2'  # Add left padding
+            )
+        ], className='mb-3'),  # Add bottom margin to the row
         html.Div(id='git-pull-status', className='mt-2'),
     ],
     id='session-list-display',
@@ -435,9 +451,7 @@ def create_parameter_layout_modal(instrument,row_length,configs):
 
 runfile_layout = html.Div([
     dbc.Row([
-        dbc.Col([
-            html.H5('RUNFILE LIST', id='runfile-list-title', className='title-link'),
-        ], width='auto'),
+        dbc.Col(html.Div(id=Runfile.CONTENT_TITLE.value, className='runfile-title'),),
         dbc.Col([
             dbc.ButtonGroup([
                 dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, color='secondary',
@@ -449,7 +463,20 @@ runfile_layout = html.Div([
             dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom'),
         ], width='auto'),
     ], className='d-flex justify-content-end'),
-    html.Div(id=Runfile.CONTENT_TITLE.value, className='runfile-title'),
+    html.Div([
+        dbc.ButtonGroup([
+            dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True, color='secondary',
+                       className='btn-icon'),
+            dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True, color='secondary',
+                       className='btn-icon'),
+            dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True,
+                       color='secondary',
+                       className='btn-icon'),
+        ], id=Table.OPTION.value, style={'display': 'none'}),
+        dbc.Tooltip("Edit Row", target=Table.EDIT_BTN.value, placement='bottom'),
+        dbc.Tooltip("Clone Row", target=Table.CLONE_ROW_BTN.value, placement='bottom'),
+        dbc.Tooltip("Delete Row", target=Table.DEL_ROW_BTN.value, placement='bottom'),
+    ], className='d-flex justify-content-start mt-3'),
     html.Div(id=Runfile.CONTENT_DISPLAY.value, style={'display': 'none'}, children=[
         html.Div([
             AgGrid(
@@ -470,19 +497,6 @@ runfile_layout = html.Div([
                 style={'height': '400px', 'width': '100%'},
             ),
         ]),
-        html.Div([
-            dbc.ButtonGroup([
-                dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True, color='secondary',
-                           className='btn-icon'),
-                dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True, color='secondary',
-                           className='btn-icon'),
-                dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True, color='secondary',
-                           className='btn-icon'),
-            ], id=Table.OPTION.value, style={'display': 'none'}),
-            dbc.Tooltip("Edit Row", target=Table.EDIT_BTN.value, placement='bottom'),
-            dbc.Tooltip("Clone Row", target=Table.CLONE_ROW_BTN.value, placement='bottom'),
-            dbc.Tooltip("Delete Row", target=Table.DEL_ROW_BTN.value, placement='bottom'),
-        ], className='d-flex justify-content-end mt-3'),
     ]),
     html.Div(id=Runfile.VALIDATION_ALERT.value),
     html.Div(dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message='')),

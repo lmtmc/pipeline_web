@@ -504,6 +504,7 @@ runfile_layout = html.Div([
     ]),
     html.Div(id=Runfile.VALIDATION_ALERT.value),
     html.Div(dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message='')),
+    html.Div(dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message='')),
     clone_runfile_modal,
 ])
 

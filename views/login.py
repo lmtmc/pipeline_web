@@ -1,12 +1,11 @@
-import concurrent
 from flask import request, session
-from dash import dcc, html, Input, Output, State, no_update, callback_context
+from dash import dcc, html, Input, Output, State, no_update
 import os
 import dash_bootstrap_components as dbc
 from my_server import app, User
 from flask_login import login_user, current_user
 from werkzeug.security import check_password_hash
-from utils import project_function as pf
+from utils import project_function as pf, repo_utils as ru
 from config_loader import load_config
 from utils.logger import log_login_attempt, log_session_start, logger
 
@@ -225,7 +224,9 @@ def login_status(n_clicks, password, pid, remember_me):
         default_pid_path = f'{default_session_prefix}{user.username}'
 
         try:
-            success, message = pf.execute_git_pull(default_pid_path)
+            # success, message = pf.execute_git_pull(default_pid_path)
+            repo_name = f'lmtoy_{user.username}'
+            success, message = ru.update_single_repo(repo_name, default_work_lmt)
 
             if success:
                 return (

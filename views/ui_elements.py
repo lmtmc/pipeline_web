@@ -450,34 +450,38 @@ def create_parameter_layout_modal(instrument,row_length,configs):
     )
 
 runfile_layout = html.Div([
-    dbc.Row([
-        dbc.Col(html.Div(id=Runfile.CONTENT_TITLE.value, className='runfile-title'),),
-        dbc.Col([
-            dbc.ButtonGroup([
-                dbc.Button(html.I(className='fas fa-clone'), id=Runfile.CLONE_BTN.value, outline=True, color='secondary',
-                           className='btn-icon'),
-                dbc.Button(html.I(className='fas fa-trash-alt'), id=Runfile.DEL_BTN.value, outline=True, color='secondary',
-                           className='btn-icon'),
-            ]),
-            dbc.Tooltip("Clone Runfile", target=Runfile.CLONE_BTN.value, placement='bottom'),
-            dbc.Tooltip("Delete Runfile", target=Runfile.DEL_BTN.value, placement='bottom'),
-        ], width='auto'),
-    ], className='d-flex justify-content-end'),
-    html.Div([
-        dbc.ButtonGroup([
-            dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True, color='secondary',
-                       className='btn-icon'),
-            dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True, color='secondary',
-                       className='btn-icon'),
-            dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True,
-                       color='secondary',
-                       className='btn-icon'),
-        ], id=Table.OPTION.value, style={'display': 'none'}),
-        dbc.Tooltip("Edit Row", target=Table.EDIT_BTN.value, placement='bottom'),
-        dbc.Tooltip("Clone Row", target=Table.CLONE_ROW_BTN.value, placement='bottom'),
-        dbc.Tooltip("Delete Row", target=Table.DEL_ROW_BTN.value, placement='bottom'),
-    ], className='d-flex justify-content-start mt-3'),
+
     html.Div(id=Runfile.CONTENT_DISPLAY.value, style={'display': 'none'}, children=[
+        dbc.Row([
+            dbc.Col(id=Runfile.CONTENT_TITLE.value, className='title-link'),
+            dbc.Col(
+                dbc.ButtonGroup([
+                    dbc.Button('Save', id='runfile-save-btn', outline=True, color='secondary',
+                               className='btn-icon'),
+                    dbc.Button('check status', id='check-status-btn', outline=True, color='secondary',
+                               className='btn-icon'),
+                    dbc.Button('submit', id='runfile-run-btn', outline=True, color='secondary',),
+                    dbc.Button('view result', id='view-result-btn', outline=True, color='secondary',
+                               className='btn-icon'),
+                ]),
+                width='auto',
+            )]),
+        html.Div([
+            dbc.ButtonGroup([
+                dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True, color='secondary',
+                           className='btn-icon'),
+                dbc.Button(html.I(className='fas fa-clone'), id=Table.CLONE_ROW_BTN.value, outline=True,
+                           color='secondary',
+                           className='btn-icon'),
+                dbc.Button(html.I(className='fas fa-trash-alt'), id=Table.DEL_ROW_BTN.value, outline=True,
+                           color='secondary',
+                           className='btn-icon'),
+            ], id=Table.OPTION.value, style={'display': 'none'}),
+            dbc.Tooltip("Edit Row", target=Table.EDIT_BTN.value, placement='bottom'),
+            dbc.Tooltip("Clone Row", target=Table.CLONE_ROW_BTN.value, placement='bottom'),
+            dbc.Tooltip("Delete Row", target=Table.DEL_ROW_BTN.value, placement='bottom'),
+        ], className='d-flex justify-content-start mt-3'),
+
         html.Div([
             AgGrid(
                 id='runfile-table',
@@ -494,7 +498,7 @@ runfile_layout = html.Div([
                     "resizable": True,
                     "sortable": True,
                 },
-                style={'height': '400px', 'width': '100%'},
+                # style={'height': '400px', 'width': '100%'},
             ),
         ]),
     ]),

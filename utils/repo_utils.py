@@ -51,16 +51,12 @@ def run_git_command(cmd: List[str], cwd: str) -> Tuple[bool, str]:
         Tuple of (success, output/error message)
     """
     try:
-        logger.debug(f"Running git command: {' '.join(['git', '-C', cwd] + cmd)}")
         result = subprocess.run(['git', '-C', cwd] + cmd,
                                 capture_output=True, text=True)
         if result.returncode != 0:
-            logger.debug(f"Git command failed with error: {result.stderr}")
             return False, result.stderr
-        logger.debug(f"Git command output: {result.stdout}")
         return True, result.stdout
     except Exception as e:
-        logger.debug(f"Exception in git command: {str(e)}")
         return False, str(e)
 
 
@@ -139,23 +135,19 @@ def get_lmt_repos_by_year() -> Dict[str, List[str]]:
     return repos_by_year
 
 
+
 def get_single_repo_status(repo_name: str) -> tuple[bool, str]:
     """Check the status of a single repository."""
-    logger.debug(f"Checking status for repository: {repo_name}")
     repo_path = os.path.join(LMTOY_RUN_DIR, repo_name)
     if not os.path.exists(repo_path):
-        logger.debug(f"Repository path does not exist: {repo_path}")
         return False, "Not tracked"
 
     success, output = run_git_command(['status', '-uno'], repo_path)
     if not success:
-        logger.debug(f"Failed to get repository status: {output}")
         return False, "Error checking status"
 
     if "Your branch is behind" in output:
-        logger.debug(f"Repository {repo_name} needs update")
         return True, "Needs update"
-    logger.debug(f"Repository {repo_name} is up to date")
     return True, "Up to date"
 
 
@@ -204,33 +196,28 @@ def update_single_repo(repo_name: str, work_dir: str) -> Tuple[bool, str]:
         Tuple of (success, message)
     """
     try:
-        logger.debug(f"Starting update for repository: {repo_name}")
-        repo_path = os.path.join(work_dir, repo_name)
+        repo_path = os.path.join(work_dir, 'lmtoy_run', repo_name)
 
         # If repository doesn't exist, clone it
         if not os.path.exists(repo_path):
-            logger.debug(f"Repository does not exist, cloning: {repo_name}")
             success, message = run_git_command(['clone', f"{LMT_BASE_URL}/{repo_name}", repo_path], work_dir)
-            if not success:
-                logger.debug(f"Failed to clone repository: {message}")
-                return False, message
+            return (True, f"Repository {repo_name} cloned successfully") if success else (False, f"Clone failed: {message}")
 
-        # Set up tracking for main branch
-        logger.debug("Setting up tracking for main branch")
-        success, message = run_git_command(['branch', '--set-upstream-to=origin/main', 'main'], repo_path)
-        if not success:
-            logger.debug(f"Failed to set up tracking: {message}")
-            return False, message
+        # For existing repos, just pull (git pull handles upstream automatically if configured)
+        success, message = run_git_command(['pull'], repo_path)
+        if success:
+            return True, f"Repository {repo_name} updated successfully"
+        else:
+            # If pull fails, it might be due to no upstream - try to set it up
+            success2, branch = run_git_command(['branch', '--show-current'], repo_path)
+            if success2:
+                branch = branch.strip()
+                run_git_command(['branch', f'--set-upstream-to=origin/{branch}', branch], repo_path)
+                success, message = run_git_command(['pull'], repo_path)
 
-        # Pull latest changes
-        logger.debug("Pulling latest changes")
-        success, message = run_git_command(['pull', 'origin', 'main'], repo_path)
-        if not success:
-            logger.debug(f"Failed to pull changes: {message}")
-            return False, message
+        return (True, f"Repository {repo_name} updated successfully") if success else (
+        False, f"Update failed: {message}")
 
-        logger.debug(f"Successfully updated repository: {repo_name}")
-        return True, f"Repository {repo_name} updated successfully"
     except Exception as e:
         error_msg = f"Error updating repository {repo_name}: {str(e)}"
         logger.error(error_msg)

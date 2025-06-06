@@ -54,20 +54,21 @@ layout = html.Div(
     [
         Output(Session.DEL_BTN.value, 'style'),
         Output(Session.NEW_BTN.value, 'style'),
-        Output('save-filter-btn', 'style'),
     ],
     Input(Session.SESSION_LIST.value, 'active_item'),
 )
 def default_session(active_session):
     if active_session is None:
         # Hide all buttons if no session is selected
-        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE
+        print(f'No active session selected: {active_session}')
+        return HIDE_STYLE, HIDE_STYLE
 
     if active_session == init_session:
         # Hide delete buttons and show only the new session button for the default session
-        return HIDE_STYLE, SHOW_STYLE, HIDE_STYLE
-
-    return SHOW_STYLE, HIDE_STYLE, SHOW_STYLE
+        print(f'Active session is default session: {active_session}')
+        return HIDE_STYLE, SHOW_STYLE
+    print(f'Active session is not default session: {active_session}')
+    return SHOW_STYLE, HIDE_STYLE
 
 
 # update session list when modifying session
@@ -82,9 +83,10 @@ def default_session(active_session):
         Input(Session.NEW_BTN.value, 'n_clicks'),
         Input(Session.SAVE_BTN.value, 'n_clicks'),
         Input(Session.CONFIRM_DEL.value, 'submit_n_clicks'),
-        Input(Session.SESSION_LIST.value, 'active_item'),
+
     ],
     [
+        State(Session.SESSION_LIST.value, 'active_item'),
         State(Session.NAME_INPUT.value, 'value'),
         State('data-store', 'data')
     ],
@@ -157,11 +159,12 @@ def display_confirmation(n_clicks, active_item):
     if ctx.triggered_id == Session.DEL_BTN.value and active_item:
         return True, f'Are you sure you want to delete {active_item}?'
     return False, ''
-# if Session-0 is clicked, not shown sumbit job and check status button, runfile table not selectable
+# if Session-0 is clicked, not shown save, sumbit job and check status button, runfile table not selectable
 @app.callback(
     [
+        Output('runfile-save-btn', 'style'),
+        Output('check-status-btn', 'style'),
         Output('runfile-run-btn', 'style'),
-        Output('runfile-check-status-btn', 'style'),
         Output('runfile-table', 'dashGridOptions'),
         Output('runfile-table', 'defaultColDef'),
     ],
@@ -180,7 +183,7 @@ def show_runfile_buttons(active_session):
             "resizable": True,
             "sortable": True,
         }
-        return HIDE_STYLE, HIDE_STYLE, dashGridOptions, defaultColDef
+        return HIDE_STYLE, HIDE_STYLE, HIDE_STYLE, dashGridOptions, defaultColDef
     else:
         # Enable selection and show checkboxes
         dashGridOptions = {
@@ -196,12 +199,12 @@ def show_runfile_buttons(active_session):
             "sortable": True,
         }
 
-    return SHOW_STYLE, SHOW_STYLE, dashGridOptions, defaultColDef
+    return SHOW_STYLE, SHOW_STYLE, SHOW_STYLE,dashGridOptions, defaultColDef
 
 # if click the view result button go to the url to view the result
 @app.callback(
     Output('result-location', 'href'),  # Keep the current URL
-    Input('view-result-link', 'n_clicks'),
+    Input('view-result-btn', 'n_clicks'),
     State(Session.SESSION_LIST.value, 'active_item'),
     State('data-store', 'data'),
     prevent_initial_call=True
@@ -209,7 +212,7 @@ def show_runfile_buttons(active_session):
 def view_result(n_clicks, active_session, data):
     if not active_session:
         return no_update, no_update
-
+    print(f'Active session for view_result: {active_session}')
     try:
         pf.make_summary(data['pid'], active_session)
         result_url = pf.generate_result_url(data['pid'], active_session)
@@ -217,6 +220,7 @@ def view_result(n_clicks, active_session, data):
         # Return both the URL for the hidden div and keep current location
         return result_url
     except Exception as e:
+        logging.error(f"Error in view_result: {str(e)}")
         logging.error(f"Error in view_result: {str(e)}")
         return no_update
 
@@ -1251,7 +1255,7 @@ def handle_git_pull(git_pull_clicks, project_updates_clicks, data):
 
         if triggered_id == 'git-pull-btn':
             # Execute git pull
-            success, message = ru.update_single_repo(repo_name, default_work_lmt)
+            success, message = ru.update_single_repo(repo_name, default_lmtoy_run)
             if not success:
                 return dbc.Alert(
                     [

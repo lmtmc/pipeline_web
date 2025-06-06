@@ -513,7 +513,7 @@ def handle_updates(active_cells, update_clicks, tables_data):
             
             if status == "Needs update":
                 # Update the repository
-                success, message = update_single_repo(repo_name, LMTOY_RUN_DIR)
+                success, message = update_single_repo(repo_name, WORK_DIR)
                 if success:
                     # Update the status in the table
                     row_data['Status'] = get_repo_status(repo_name)

@@ -602,10 +602,6 @@ def generate_result_url(pid, session_name):
     # Check if session_name is init_session
     is_init = session_name == init_session
 
-    # For initial redirect after login, return the project page URL
-    if is_init and not session_name:
-        return f"/project/{pid}"
-
     # For viewing results
     if is_init:
         url = f"http://taps.lmtgtm.org/lmtslr/{pid}/README.html"

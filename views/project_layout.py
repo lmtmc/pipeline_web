@@ -227,39 +227,66 @@ def view_result(n_clicks, active_session, data):
 # submit job
 # if submit job is clicked show confirm submit modal, if cancel submit job is clicked hide the modal
 @app.callback(
-    Output('confirm-submit-job', 'is_open'),
-    Input(Runfile.RUN_BTN.value, 'n_clicks'),
-    Input('cancel-submit-job', 'n_clicks'),
-    Input('confirm-submit-job-btn', 'n_clicks'),
-    State('data-store', 'data'),
+    Output('confirm-submit-job', 'is_open', allow_duplicate=True),
+    [
+        Input('runfile-run-btn', 'n_clicks'),
+        Input('cancel-submit-job', 'n_clicks'),
+        Input('confirm-submit-job-btn', 'n_clicks')
+    ],
     prevent_initial_call=True
 )
-def show_confirm_submit(n_clicks, cancel_clicks, confirm_clicks, data):
-    button_id = ctx.triggered_id
-    if button_id == Runfile.RUN_BTN.value:
+def show_confirm_submit(n_clicks, cancel_clicks, confirm_clicks):
+    if not ctx.triggered:
+        raise PreventUpdate
+        
+    triggered_id = ctx.triggered_id
+    
+    if triggered_id == 'runfile-run-btn':
         return True
-    elif button_id == 'cancel-submit-job' or button_id == 'confirm-submit-job-btn':
+    elif triggered_id in ['cancel-submit-job', 'confirm-submit-job-btn']:
         return False
+        
+    return False
+
 @app.callback(
-    Output(Session.SUBMIT_JOB.value, 'children'),
+    [
+        Output(Session.SUBMIT_JOB.value, 'children'),
+        Output('confirm-submit-job', 'is_open')
+    ],
     Input('confirm-submit-job-btn', 'n_clicks'),
-    State({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    State(Session.SESSION_LIST.value, 'active_item'),
-    State('email-input', 'value'),
-    State('data-store', 'data'),
+    [
+        State({'type': 'runfile-radio', 'index': ALL}, 'value'),
+        State(Session.SESSION_LIST.value, 'active_item'),
+        State('email-input', 'value'),
+        State('data-store', 'data')
+    ],
     prevent_initial_call=True
 )
 def submit_job(n_clicks, selected_runfile, session, email, data_store):
     if not n_clicks:
         raise PreventUpdate
         
+    if not ctx.triggered:
+        raise PreventUpdate
+        
+    triggered_id = ctx.triggered_id
+    if triggered_id != 'confirm-submit-job-btn':
+        raise PreventUpdate
+        
     selected_runfile = next((value for value in selected_runfile if value), None)
     if not selected_runfile:
-        return dbc.Alert("No runfile selected.", color="warning", dismissable=True)
+        return dbc.Alert("No runfile selected.", color="warning", dismissable=True), True
+        
+    if not session:
+        return dbc.Alert("No session selected.", color="warning", dismissable=True), True
         
     runfile_name = os.path.basename(selected_runfile)
     if not email:
-        return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True)
+        return dbc.Alert("Please enter an email address to receive job submission notifications.", color="warning", dismissable=True), True
+        
+    # Validate email format
+    if not pf.is_valid_email(email):
+        return dbc.Alert("Please enter a valid email address.", color="warning", dismissable=True), True
         
     # Prepare confirmation message
     confirmation_message = dbc.Alert(
@@ -278,9 +305,9 @@ def submit_job(n_clicks, selected_runfile, session, email, data_store):
         Thread(target=pf.process_job_submission, args=(data_store['pid'], selected_runfile, session, email)).start()
     except Exception as e:
         logging.error(f"Error submitting job: {str(e)}")
-        return dbc.Alert(f"Error submitting job: {str(e)}", color="danger", dismissable=True)
+        return dbc.Alert(f"Error submitting job: {str(e)}", color="danger", dismissable=True), True
         
-    return confirmation_message
+    return confirmation_message, True
 
 @app.callback(
     Output("slurm-job-status-output", "children", allow_duplicate=True),
@@ -1086,7 +1113,7 @@ def update_runfile_display(active_session, selected_runfile, data):
         Output('save-filter-alert','displayed')
     ],
     [
-        Input('save-filter-btn', 'n_clicks'),
+        Input('runfile-save-btn', 'n_clicks'),
         Input('save-filter-alert', 'submit_n_clicks'),
         Input('save-filter-alert', 'cancel_n_clicks')
     ],
@@ -1100,9 +1127,17 @@ def update_runfile_display(active_session, selected_runfile, data):
 def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_model, data_store):
     if not ctx.triggered:
         raise PreventUpdate
-    if ctx.triggered_id == 'save-filter-btn':
+        
+    triggered_id = ctx.triggered_id
+    
+    if triggered_id == 'runfile-save-btn':
+        # Show the confirmation dialog when save button is clicked
         return no_update, True
-    elif ctx.triggered_id == 'save-filter-alert':
+        
+    elif triggered_id == 'save-filter-alert':
+        if not confirm_clicks:
+            return no_update, False
+            
         # Convert the row data and data store to DataFrame
         df = pd.DataFrame(row_data)
         # Apply the filter model to the DataFrame
@@ -1137,13 +1172,16 @@ def save_filter(save_clicks, confirm_clicks, cancel_clicks, row_data, filter_mod
                 elif filter_details['filterType'] == 'set':
                     filter_values = filter_details['values']
                     df = df[df[column].isin(filter_values)]
+                    
         # Save the filtered data
         filtered_data = df.to_dict('records')
         print(f"Filtered data saved to {data_store['selected_runfile']}")
         pf.save_runfile(df, data_store['selected_runfile'])
         return filtered_data, False
-    elif ctx.triggered_id == 'save-filter-alert.cancel_n_clicks':
+        
+    elif triggered_id == 'save-filter-alert.cancel_n_clicks':
         return no_update, False
+        
     return no_update, no_update
 
 # # if there is job running disable the sumbit job button

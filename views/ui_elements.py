@@ -450,13 +450,12 @@ def create_parameter_layout_modal(instrument,row_length,configs):
     )
 
 runfile_layout = html.Div([
-
     html.Div(id=Runfile.CONTENT_DISPLAY.value, style={'display': 'none'}, children=[
         dbc.Row([
             dbc.Col(id=Runfile.CONTENT_TITLE.value, className='title-link'),
             dbc.Col(
                 dbc.ButtonGroup([
-                    dbc.Button('Save', id='runfile-save-btn', outline=True, color='secondary',
+                    dbc.Button('Save Filtered Data', id='runfile-save-btn', outline=True, color='secondary',
                                className='btn-icon'),
                     dbc.Button('check status', id='check-status-btn', outline=True, color='secondary',
                                className='btn-icon'),
@@ -481,7 +480,6 @@ runfile_layout = html.Div([
             dbc.Tooltip("Clone Row", target=Table.CLONE_ROW_BTN.value, placement='bottom'),
             dbc.Tooltip("Delete Row", target=Table.DEL_ROW_BTN.value, placement='bottom'),
         ], className='d-flex justify-content-start mt-3'),
-
         html.Div([
             AgGrid(
                 id='runfile-table',
@@ -498,14 +496,28 @@ runfile_layout = html.Div([
                     "resizable": True,
                     "sortable": True,
                 },
-                # style={'height': '400px', 'width': '100%'},
             ),
         ]),
     ]),
     html.Div(id=Runfile.VALIDATION_ALERT.value),
     html.Div(dcc.ConfirmDialog(id=Runfile.CONFIRM_DEL_ALERT.value, message='')),
     html.Div(dcc.ConfirmDialog(id=Table.CONFIRM_DEL_ROW.value, message='')),
+    html.Div(dcc.ConfirmDialog(id='save-filter-alert', message='Are you sure you want to save the filtered data? This will overwrite the current data.')),
     clone_runfile_modal,
+    # Add job submission confirmation modal
+    dbc.Modal([
+        dbc.ModalHeader("Confirm Job Submission"),
+        dbc.ModalBody([
+            html.P("Please enter your email address to receive job submission notifications:"),
+            dbc.Input(id="email-input", type="email", placeholder="Enter your email"),
+            html.Div(id=Session.SUBMIT_JOB.value),
+        ]),
+        dbc.ModalFooter([
+            dbc.Button("Cancel", id="cancel-submit-job", color="secondary", className="me-2"),
+            dbc.Button("Submit", id="confirm-submit-job-btn", color="primary"),
+        ]),
+    ], id="confirm-submit-job"),
+    
 ])
 
 job_status_layout = html.Div(

@@ -353,6 +353,7 @@ rsr_parameter_configs = common_configs + [
 ]
 
 sequoia_parameter_configs = common_configs + [
+    {'name': 'pix_action', 'type': 'radio', 'options':['Add','Exclude'], 'width': 2},
     {'name': 'pix_list', 'type': 'checkbox',
      'options':[{'label': str(i), 'value': str(i)} for i in range(16)],'value':[],'width': 2},
     {'name': 'dv', 'type': 'input'},

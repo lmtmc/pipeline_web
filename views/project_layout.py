@@ -654,7 +654,7 @@ rsr_outputs = [
 seq_outputs = [
     Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['seq-obsnum', 'seq-_s']
     else Output(f'{col}-checkbox', 'value') if col == 'seq-pix_list'
-    else Output(f'{col}-radio', 'value') if col == 'seq_admit'
+    else Output(f'{col}-radio', 'value') if col == 'seq_admit' or col == 'seq-pix_action'
     else Output(f'{col}-input', 'value')
     for col in seq_cols
 ]
@@ -726,16 +726,36 @@ def show_edit_layout(n1, selected_rows):
     cols = [col.split('-')[1] for col in seq_cols]
     # Handle 'pix_list' safely
     pix_list = selected_row_data.get('pix_list')
-    if pix_list is None:
-        selected_row_data['pix_list'] = []
+    # if pix_list is None:
+    #     selected_row_data['pix_list'] = []
+    # elif isinstance(pix_list, str):
+    #     selected_row_data['pix_list'] = pix_list.split(',')
+    if not pix_list or (isinstance(pix_list, str) and pix_list.strip() == ''):
+        pix_action = 'N/A'
+        pix_list_values = []
     elif isinstance(pix_list, str):
-        selected_row_data['pix_list'] = pix_list.split(',')
+        if pix_list.startswith('-'):
+            pix_action = 'Exclude'
+            pix_list_values = pix_list[1:].split(',') if pix_list[1:] else []
+        else:
+            pix_action = 'Add'
+            pix_list_values = pix_list.split(',') if pix_list else []
+    elif isinstance(pix_list, list):
+        pix_action = 'Add'
+        pix_list_values = pix_list
+    else:
+        pix_action = 'N/A'
+        pix_list_values = []
 
-    values = [
-        selected_row_data.get(col, [] if col == 'pix_list' else None)
-        if col in selected_row_data else []  # Check if 'col' exists in selected_row_data
-        for col in cols
-    ]
+    values = []
+    for col in cols:
+        if col == 'pix_action':
+            values.append(pix_action)
+        elif col == 'pix_list':
+            values.append(pix_list_values)
+        else:
+            # For other columns, get the value directly
+            values.append(selected_row_data.get(col, None))
     # Return the values in the correct order
     return values
 
@@ -845,16 +865,29 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     cols = [col.split('-')[1] for col in seq_cols]
     updated_values = dict(zip(cols, args))
 
-    # Sort seq-pix_list
-    if 'pix_list' in updated_values:
-        if 'pix_list' in updated_values:
-            pix_list_value = updated_values['pix_list']
-            if isinstance(pix_list_value, list):
-                # Convert list items to integers, sort them, and convert back to strings
-                sorted_pix_list = sorted(int(x) for x in pix_list_value if x.isdigit())
-                updated_values['pix_list'] = ','.join(map(str, sorted_pix_list))
-            else:
-                updated_values['pix_list'] = None
+    # # Sort seq-pix_list
+    # if 'pix_list' in updated_values:
+    #     if 'pix_list' in updated_values:
+    #         pix_list_value = updated_values['pix_list']
+    #         if isinstance(pix_list_value, list):
+    #             # Convert list items to integers, sort them, and convert back to strings
+    #             sorted_pix_list = sorted(int(x) for x in pix_list_value if x.isdigit())
+    #             updated_values['pix_list'] = ','.join(map(str, sorted_pix_list))
+    #         else:
+    #             updated_values['pix_list'] = None
+    # handle seq-pix_list and pix_action
+    pix_action = updated_values.get('pix_action', 'N/A')
+    pix_list_value = updated_values.get('pix_list', [])
+    if pix_action == 'Exclude' and pix_list_value:
+        pix_list_str='-'+','.join(str(x) for x in sorted(map(int, pix_list_value ))))
+    elif pix_action == 'Add' and pix_list_value:
+        pix_list_str=','.join(str(x) for x in sorted(map(int, pix_list_value)))
+    else:
+        pix_list_str = ''
+    updated_values['pix_list'] = pix_list_str
+
+    # Remove pix_action from updated values
+    updated_values.pop('pix_action', None)
 
     # Special handling for list-type columns
     for key, value in updated_values.items():

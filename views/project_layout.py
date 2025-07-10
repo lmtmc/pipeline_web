@@ -856,44 +856,46 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
 def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *args):
     if not n_clicks or not selected_rows:
         raise PreventUpdate
-
+    
     selected_row = selected_rows[0]
     selected_index = selected_row.get('index')
     if selected_index is None:
         raise PreventUpdate
+    
     # Map input values to columns
     # remove seq to match the table column names
     cols = [col.split('-')[1] for col in seq_cols]
     updated_values = dict(zip(cols, args))
 
-    # # Sort seq-pix_list
-    # if 'pix_list' in updated_values:
-    #     if 'pix_list' in updated_values:
-    #         pix_list_value = updated_values['pix_list']
-    #         if isinstance(pix_list_value, list):
-    #             # Convert list items to integers, sort them, and convert back to strings
-    #             sorted_pix_list = sorted(int(x) for x in pix_list_value if x.isdigit())
-    #             updated_values['pix_list'] = ','.join(map(str, sorted_pix_list))
-    #         else:
-    #             updated_values['pix_list'] = None
-    # handle seq-pix_list and pix_action
+    # Handle seq-pix_list and pix_action
     pix_action = updated_values.get('pix_action', 'N/A')
     pix_list_value = updated_values.get('pix_list', [])
-    if pix_action == 'Exclude' and pix_list_value:
-        pix_list_str='-'+','.join(str(x) for x in sorted(map(int, pix_list_value )))
-    elif pix_action == 'Add' and pix_list_value:
-        pix_list_str=','.join(str(x) for x in sorted(map(int, pix_list_value)))
-    else:
+    
+    # Safely process pix_list values
+    try:
+        if pix_action == 'Exclude' and pix_list_value:
+            # Convert to integers, sort, and create exclude string
+            valid_pixels = [int(x) for x in pix_list_value if str(x).isdigit()]
+            if valid_pixels:
+                pix_list_str = '-' + ','.join(str(x) for x in sorted(valid_pixels))
+            else:
+                pix_list_str = None
+        elif pix_action == 'Add' and pix_list_value:
+            # Convert to integers, sort, and create add string
+            valid_pixels = [int(x) for x in pix_list_value if str(x).isdigit()]
+            if valid_pixels:
+                pix_list_str = ','.join(str(x) for x in sorted(valid_pixels))
+            else:
+                pix_list_str = None
+        else:
+            pix_list_str = None
+    except (ValueError, TypeError) as e:
+        # If there's any error processing pix_list, set it to None
         pix_list_str = None
+    
     updated_values['pix_list'] = pix_list_str
 
-    # Add after the pix_list processing
-    print(f"pix_action: {pix_action}")
-    print(f"pix_list_value: {pix_list_value}")
-    print(f"pix_list_str: {pix_list_str}")
-    print(f"updated_values before DataFrame: {updated_values}")
-
-    # Remove pix_action from updated values
+    # Remove pix_action from updated values since it's not a table column
     updated_values.pop('pix_action', None)
 
     # Special handling for list-type columns
@@ -903,8 +905,10 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
             updated_values[key] = ','.join(map(str, value)) if value else None
 
     updated_values['index'] = selected_index
+    
     # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])
+    
     # Create a DataFrame from the existing data
     row_data_df = pd.DataFrame(row_data)
 
@@ -935,11 +939,9 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
             'checkboxSelection': col == 'index',
             'headerCheckboxSelection': col == 'index',
         }
-        for col in columns_with_values if str(col)!='length'
+        for col in columns_with_values
     ]
-    # Add after creating the DataFrame
-    print(f"row_data_df columns: {row_data_df.columns.tolist()}")
-    print(f"Updated row data: {row_data_df.loc[selected_index]}")
+    
     # Save the updated runfile if applicable
     runfile = data_store.get('selected_runfile')
     if runfile:

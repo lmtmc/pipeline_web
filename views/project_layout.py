@@ -657,7 +657,7 @@ rsr_outputs = [
 seq_outputs = [
     Output(f'{col}-dropdown', 'value', allow_duplicate=True) if col in ['seq-obsnum', 'seq-_s']
     else Output(f'{col}-checkbox', 'value') if col == 'seq-pix_list'
-    else Output(f'{col}-radio', 'value') if col == 'seq_admit' or col == 'seq-pix_action'
+    else Output(f'{col}-radio', 'value') if col == 'seq-pix_action'
     else Output(f'{col}-input', 'value')
     for col in seq_cols
 ]

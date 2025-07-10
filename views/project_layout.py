@@ -372,12 +372,12 @@ def display_confirm_dialog(n_clicks, job_id):
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
         Input(Runfile.CONFIRM_DEL_ALERT.value, 'submit_n_clicks'),
-        #Input(Session.SESSION_LIST.value, 'active_item'),
+        Input(Session.SESSION_LIST.value, 'active_item'),
     ],
     State('data-store', 'data'),
     prevent_initial_call=True
 )
-def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
+def display_runfile_content(selected_runfile, del_runfile_btn, active_session, data_store):
     if not ctx.triggered:
         raise PreventUpdate
     
@@ -791,6 +791,19 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
 
     updated_values = dict(zip(cols, args))
 
+    # Validate that obsnum is specified
+    obsnum_value = updated_values.get('obsnum')
+    if not obsnum_value or (isinstance(obsnum_value, list) and not obsnum_value) or (isinstance(obsnum_value, str) and not obsnum_value.strip()):
+        # Return an error message - you might want to show this in the UI
+        print("Error: obsnum must be specified before updating data")
+        return no_update, no_update
+
+    # Special handling for list-type columns
+    for key, value in updated_values.items():
+        if isinstance(value, list):
+            # Convert list to comma-separated string or None if empty
+            updated_values[key] = ','.join(map(str, value)) if value else None
+
     updated_values['index'] = selected_index
     # Create a DataFrame from the updated values
     updated_values_df = pd.DataFrame([updated_values])
@@ -835,7 +848,7 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
 
     row_data = row_data_df.to_dict('records')
     for row in row_data:
-        if isinstance(row['obsnum'], list):
+        if 'obsnum' in row and isinstance(row['obsnum'], list):
             row['obsnum'] = ','.join(row['obsnum'])
 
     return column_defs, row_data
@@ -850,7 +863,7 @@ def update_selected_rows_rsr(n_clicks, selected_rows, row_data, data_store, *arg
     State('data-store', 'data'),
     *[State(f'{col}-dropdown', 'value') if col in ['seq-obsnum', 'seq-_s']
       else State(f'{col}-checkbox', 'value') if col == 'seq-pix_list'
-      else State(f'{col}-radio', 'value') if col == 'seq-admit'
+      else State(f'{col}-radio', 'value') if col == 'seq-pix_action'
       else State(f'{col}-input', 'value')
       for col in seq_cols],
     prevent_initial_call=True
@@ -868,6 +881,13 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     # remove seq to match the table column names
     cols = [col.split('-')[1] for col in seq_cols]
     updated_values = dict(zip(cols, args))
+
+    # Validate that obsnum is specified
+    obsnum_value = updated_values.get('obsnum')
+    if not obsnum_value or (isinstance(obsnum_value, list) and not obsnum_value) or (isinstance(obsnum_value, str) and not obsnum_value.strip()):
+        # Return an error message - you might want to show this in the UI
+        print("Error: obsnum must be specified before updating data")
+        return no_update, no_update
 
     # Handle seq-pix_list and pix_action
     pix_action = updated_values.get('pix_action', 'N/A')

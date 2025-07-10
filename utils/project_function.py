@@ -41,6 +41,44 @@ clone_session_command = 'lmtoy_dispatch/lmtoy_clone_session.sh'
 def check_user_exists():
     return current_user and current_user.is_authenticated
 
+def get_current_runfile(selected_runfile, data_store=None, triggered_id=None):
+    """
+    Extract the current runfile from the selected_runfile list.
+    
+    Args:
+        selected_runfile: List of runfile values from radio buttons
+        data_store: Data store containing project information (optional)
+        triggered_id: The triggered component ID (optional)
+    
+    Returns:
+        The current runfile path or None if not found
+    """
+    if not selected_runfile:
+        return None
+    
+    # If we have triggered_id and data_store, try to get the specific session
+    if triggered_id and data_store and isinstance(triggered_id, dict) and 'index' in triggered_id:
+        try:
+            session_name = triggered_id['index']
+            pid_path = os.path.join(config['path']['work_lmt'], data_store['pid'])
+            session_info = get_session_info(init_session, pid_path)
+            
+            # Find the index of the session in the session_info list
+            session_index = None
+            for i, session in enumerate(session_info):
+                if session['name'] == session_name:
+                    session_index = i
+                    break
+            
+            # Get the value for the specific session that was clicked
+            if session_index is not None and session_index < len(selected_runfile):
+                return selected_runfile[session_index]
+        except Exception as e:
+            logging.error(f"Error finding session index: {str(e)}")
+    
+    # Fallback to the old method: get the first non-None value
+    return next((value for value in selected_runfile if value), None)
+
 # check if path exists
 def ensure_path_exists(path):
     if not path or not os.path.exists(path):

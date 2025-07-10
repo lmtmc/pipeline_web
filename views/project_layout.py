@@ -273,7 +273,7 @@ def submit_job(n_clicks, selected_runfile, session, email, data_store):
     if triggered_id != 'confirm-submit-job-btn':
         raise PreventUpdate
         
-    selected_runfile = next((value for value in selected_runfile if value), None)
+    selected_runfile = pf.get_current_runfile(selected_runfile, data_store, ctx.triggered_id)
     if not selected_runfile:
         return dbc.Alert("No runfile selected.", color="warning", dismissable=True), True
         
@@ -368,20 +368,22 @@ def display_confirm_dialog(n_clicks, job_id):
         Output('runfile-table', 'rowData', allow_duplicate=True),
         Output('runfile-table', 'columnDefs', allow_duplicate=True),
         Output('data-store', 'data', allow_duplicate=True),
-        #Output('submit-job-confirm-text', 'children'),
     ],
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
         Input(Runfile.CONFIRM_DEL_ALERT.value, 'submit_n_clicks'),
-        Input(Session.SESSION_LIST.value, 'active_item'),
+        #Input(Session.SESSION_LIST.value, 'active_item'),
     ],
     State('data-store', 'data'),
     prevent_initial_call=True
 )
-def display_runfile_content(selected_runfile, del_runfile_btn, active_item, data_store):
+def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
     if not ctx.triggered:
         raise PreventUpdate
-    current_runfile = next((value for value in selected_runfile if value), None)
+    
+    # Use the utility function to get the current runfile
+    current_runfile = pf.get_current_runfile(selected_runfile, data_store, ctx.triggered_id)
+    
 
     if not current_runfile:
         return '', HIDE_STYLE, '','',data_store
@@ -1091,65 +1093,65 @@ def toggle_parameter_help(n_clicks, current_style):
         # Show the help section
         return SHOW_STYLE, ui.create_parameter_help(instruments[1])
 
-@app.callback(
-    [
-        Output('runfile-table', 'rowData',allow_duplicate=True),
-        Output('runfile-table', 'columnDefs',allow_duplicate=True),
-        Output('runfile-content-title', 'children',allow_duplicate=True),
-        Output(Runfile.CONTENT_DISPLAY.value, 'style'),
-    ],
-    [
-        Input(Session.SESSION_LIST.value, 'active_item'),
-        Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
-    ],
-    State('data-store', 'data'),
-)
-def update_runfile_display(active_session, selected_runfile, data):
-    if not active_session:
-        return [], [], '', HIDE_STYLE
+# @app.callback(
+#     [
+#         Output('runfile-table', 'rowData',allow_duplicate=True),
+#         Output('runfile-table', 'columnDefs',allow_duplicate=True),
+#         Output('runfile-content-title', 'children',allow_duplicate=True),
+#         Output(Runfile.CONTENT_DISPLAY.value, 'style'),
+#     ],
+#     [
+#         Input(Session.SESSION_LIST.value, 'active_item'),
+#         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
+#     ],
+#     State('data-store', 'data'),
+# )
+# def update_runfile_display(active_session, selected_runfile, data):
+#     if not active_session:
+#         return [], [], '', HIDE_STYLE
 
-    try:
-        # Get the selected runfile
-        selected_runfile = next((value for value in selected_runfile if value), None)
+#     try:
+#         # Get the selected runfile
+#         selected_runfile = next((value for value in selected_runfile if value), None)
         
-        if not selected_runfile:
-            return [], [], '', HIDE_STYLE
+#         if not selected_runfile:
+#             return [], [], '', HIDE_STYLE
 
-        # Get runfile data
-        runfile_data, runfile_content = pf.df_runfile(selected_runfile)
+#         # Get runfile data
+#         runfile_data, runfile_content = pf.df_runfile(selected_runfile)
         
-        if runfile_data.empty:
-            return [], [], '', HIDE_STYLE
+#         if runfile_data.empty:
+#             return [], [], '', HIDE_STYLE
 
-        # Generate column definitions
-        column_defs = [
-            {
-                'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
-                'field': col,
-                'filter': True,
-                'sortable': True,
-                'headerTooltip': f'{col} column',
-                'checkboxSelection': col == 'index',
-                'headerCheckboxSelection': col == 'index',
-                'width': 150,
-                'resizable': True,
-                'minWidth': 100,
-                'maxWidth': 300,
-            }
-            for col in runfile_data.columns
-        ]
+#         # Generate column definitions
+#         column_defs = [
+#             {
+#                 'headerName': 'instrument' if col == '_io' else 'source' if col == '_s' else col,
+#                 'field': col,
+#                 'filter': True,
+#                 'sortable': True,
+#                 'headerTooltip': f'{col} column',
+#                 'checkboxSelection': col == 'index',
+#                 'headerCheckboxSelection': col == 'index',
+#                 'width': 150,
+#                 'resizable': True,
+#                 'minWidth': 100,
+#                 'maxWidth': 300,
+#             }
+#             for col in runfile_data.columns
+#         ]
 
-        # Convert DataFrame to records
-        row_data = runfile_data.to_dict('records')
+#         # Convert DataFrame to records
+#         row_data = runfile_data.to_dict('records')
         
-        # Get runfile title
-        runfile_title = pf.get_runfile_title(selected_runfile, active_session)
+#         # Get runfile title
+#         runfile_title = pf.get_runfile_title(selected_runfile, active_session)
 
-        return row_data, column_defs, runfile_title, SHOW_STYLE
+#         return row_data, column_defs, runfile_title, SHOW_STYLE
 
-    except Exception as e:
-        logging.error(f"Error updating runfile display: {str(e)}")
-        return [], [], '', HIDE_STYLE
+#     except Exception as e:
+#         logging.error(f"Error updating runfile display: {str(e)}")
+#         return [], [], '', HIDE_STYLE
 
 @app.callback(
     [
@@ -1254,7 +1256,7 @@ def load_runfile_notes(selected_runfile, data):
     if not selected_runfile:
         raise PreventUpdate
         
-    current_runfile = next((value for value in selected_runfile if value), None)
+    current_runfile = pf.get_current_runfile(selected_runfile, data, ctx.triggered_id)
     if not current_runfile:
         return ''
         
@@ -1278,7 +1280,7 @@ def save_runfile_notes(notes, selected_runfile):
     if not selected_runfile:
         raise PreventUpdate
         
-    current_runfile = next((value for value in selected_runfile if value), None)
+    current_runfile = pf.get_current_runfile(selected_runfile, None, ctx.triggered_id)
     if not current_runfile:
         return ''
         
@@ -1304,7 +1306,7 @@ def save_notes_on_runfile_save(row_data, selected_runfile, notes):
     if not selected_runfile:
         raise PreventUpdate
         
-    current_runfile = next((value for value in selected_runfile if value), None)
+    current_runfile = pf.get_current_runfile(selected_runfile, None, ctx.triggered_id)
     if not current_runfile:
         return ''
         
@@ -1401,4 +1403,3 @@ def handle_git_pull(git_pull_clicks, project_updates_clicks, data):
             color="danger",
             dismissable=True
         )
-

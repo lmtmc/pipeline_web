@@ -884,8 +884,14 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     elif pix_action == 'Add' and pix_list_value:
         pix_list_str=','.join(str(x) for x in sorted(map(int, pix_list_value)))
     else:
-        pix_list_str = ''
+        pix_list_str = None
     updated_values['pix_list'] = pix_list_str
+
+    # Add after the pix_list processing
+    print(f"pix_action: {pix_action}")
+    print(f"pix_list_value: {pix_list_value}")
+    print(f"pix_list_str: {pix_list_str}")
+    print(f"updated_values before DataFrame: {updated_values}")
 
     # Remove pix_action from updated values
     updated_values.pop('pix_action', None)
@@ -931,7 +937,9 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
         }
         for col in columns_with_values if str(col)!='length'
     ]
-
+    # Add after creating the DataFrame
+    print(f"row_data_df columns: {row_data_df.columns.tolist()}")
+    print(f"Updated row data: {row_data_df.loc[selected_index]}")
     # Save the updated runfile if applicable
     runfile = data_store.get('selected_runfile')
     if runfile:

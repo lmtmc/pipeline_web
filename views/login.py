@@ -1,3 +1,8 @@
+# login.py
+# This file handles user login functionality for the Dash application.
+# It includes the login form, password visibility toggle, and login status management.
+# It also manages user authentication, session handling, and integrates with the Flask-Login extension.
+
 from flask import request, session
 from dash import dcc, html, Input, Output, State, no_update
 import os

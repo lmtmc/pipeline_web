@@ -1,4 +1,11 @@
 # Standard library imports
+# This file is part of the Dash application for managing projects and user sessions.
+# It initializes the app, sets up the layout, and defines the routing logic.
+# It also handles user authentication, project management, and provides a basic admin interface.
+# The application uses Flask for session management and Dash for the frontend.
+# The app is designed to be run with a command line interface, allowing customization of the port
+# on which the server runs. It also includes logging for debugging and error tracking.
+
 import os
 import argparse
 import logging

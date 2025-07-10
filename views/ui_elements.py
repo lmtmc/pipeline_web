@@ -192,17 +192,17 @@ session_layout = html.Div(
                     color='primary',
                     className='w-100'
                 ),
-                width=6,
+                width='auto',
                 className='pe-2'  # Add right padding
             ),
             dbc.Col(
                 dbc.Button(
-                    [html.I(className='fas fa-sync-alt me-2'), "Project Status"],
+                    [html.I(className='fas fa-sync-alt me-2'), "Status"],
                     id='project-updates-btn',
                     color='info',
                     className='w-100'
                 ),
-                width=6,
+                width= 'auto',
                 className='ps-2'  # Add left padding
             )
         ], className='mb-3'),  # Add bottom margin to the row

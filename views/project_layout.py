@@ -373,11 +373,12 @@ def display_confirm_dialog(n_clicks, job_id):
     [
         Input({'type': 'runfile-radio', 'index': ALL}, 'value'),
         Input(Runfile.CONFIRM_DEL_ALERT.value, 'submit_n_clicks'),
+        Input(Session.SESSION_LIST.value, 'active_item'),
     ],
     State('data-store', 'data'),
     prevent_initial_call=True
 )
-def display_runfile_content(selected_runfile, del_runfile_btn, data_store):
+def display_runfile_content(selected_runfile, del_runfile_btn, active_item, data_store):
     if not ctx.triggered:
         raise PreventUpdate
     current_runfile = next((value for value in selected_runfile if value), None)

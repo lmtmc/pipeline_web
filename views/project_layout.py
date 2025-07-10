@@ -879,7 +879,7 @@ def update_selected_rows_seq(n_clicks, selected_rows, row_data, data_store, *arg
     pix_action = updated_values.get('pix_action', 'N/A')
     pix_list_value = updated_values.get('pix_list', [])
     if pix_action == 'Exclude' and pix_list_value:
-        pix_list_str='-'+','.join(str(x) for x in sorted(map(int, pix_list_value ))))
+        pix_list_str='-'+','.join(str(x) for x in sorted(map(int, pix_list_value )))
     elif pix_action == 'Add' and pix_list_value:
         pix_list_str=','.join(str(x) for x in sorted(map(int, pix_list_value)))
     else:

@@ -8,6 +8,7 @@ from datetime import datetime
 from config_loader import load_config
 from flask_caching import Cache
 import logging
+import os
 
 # Setup logging
 logging.basicConfig(
@@ -30,6 +31,13 @@ server.config.update(
     SQLALCHEMY_DATABASE_URI='sqlite:///users.db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 )
+
+# Initialize CSV authentication
+csv_path = config.get('authentication', {}).get('csv_path', '.')
+csv_file = config.get('authentication', {}).get('csv_file', 'lmt_archive_user_info_20250702.csv')
+csv_file_path = os.path.join(os.path.dirname(__file__), csv_path, csv_file)
+from db.csv_auth import init_csv_auth
+csv_auth_manager = init_csv_auth(csv_file_path)
 
 # Initialize cache
 cache = Cache(server, config={
@@ -125,6 +133,13 @@ with server.app_context():
 @cache.memoize(timeout=300)  # Cache user lookup for 5 minutes
 def load_user(user_id):
     try:
+        # Try CSV authentication first
+        if csv_auth_manager:
+            user = csv_auth_manager.get_user(user_id)
+            if user:
+                return user
+        
+        # Fallback to database authentication
         return User.query.get(int(user_id))
     except Exception as e:
         logger.error(f"Error loading user {user_id}: {e}")

@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash
 from utils import project_function as pf, repo_utils as ru
 from config_loader import load_config
 from utils.logger import log_login_attempt, log_session_start, logger
+from db.csv_users_mgt import authenticate_user
 
 
 # Load configuration
@@ -177,27 +178,35 @@ def login_status(n_clicks, password, pid, remember_me):
         )
 
     try:
-        # Fetch user and validate password
-        user = User.query.filter_by(username=pid).first()
-
-        if not user or not check_password_hash(user.password, password):
-            # Log failed login attempt
-            log_login_attempt(
-                username=pid,
-                success=False,
-                ip_address=request.remote_addr,
-                user_agent=request.user_agent.string
-            )
-            return (
-                'Invalid credentials. Please try again.',
-                True,
-                'danger',
-                no_update,
-                ''  # Clear password field
-            )
-
-        # Login successful
-        login_user(user, remember=bool(remember_me))
+        # First try CSV-based authentication
+        csv_user = authenticate_user(pid, password)
+        
+        if csv_user:
+            # CSV authentication successful
+            user = csv_user
+            login_user(user, remember=bool(remember_me))
+        else:
+            # Fallback to database authentication
+            user = User.query.filter_by(username=pid).first()
+            
+            if not user or not check_password_hash(user.password, password):
+                # Log failed login attempt
+                log_login_attempt(
+                    username=pid,
+                    success=False,
+                    ip_address=request.remote_addr,
+                    user_agent=request.user_agent.string
+                )
+                return (
+                    'Invalid credentials. Please try again.',
+                    True,
+                    'danger',
+                    no_update,
+                    ''  # Clear password field
+                )
+            
+            # Database authentication successful
+            login_user(user, remember=bool(remember_me))
 
         # Log successful login
         log_login_attempt(
@@ -215,7 +224,7 @@ def login_status(n_clicks, password, pid, remember_me):
             ip_address=request.remote_addr
         )
 
-        # Handle admin login
+        # Handle admin login (only for database users)
         if user.username == 'admin':
             return (
                 'Login as Admin successful!',

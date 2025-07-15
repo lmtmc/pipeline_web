@@ -1,0 +1,8 @@
+2025-07-14 12:23:36,877 - app - ERROR - Git pull failed for user 2023-S1-UM-7: Clone failed: Cloning into '/home/lmt/work_lmt/lmtoy_run/lmtoy_2023-S1-UM-7'...
+remote: Repository not found.
+fatal: repository 'https://github.com/lmtoy/lmtoy_2023-S1-UM-7/' not found
+
+2025-07-14 22:20:46,870 - app - ERROR - Git pull failed for user 2023-S1-MX-20: Clone failed: Cloning into '/home/lmt/work_lmt/lmtoy_run/lmtoy_2023-S1-MX-20'...
+remote: Repository not found.
+fatal: repository 'https://github.com/lmtoy/lmtoy_2023-S1-MX-20/' not found
+

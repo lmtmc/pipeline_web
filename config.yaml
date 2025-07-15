@@ -19,4 +19,8 @@ github:
   api_url: https://api.github.com/orgs/lmtoy/repos
   repo_prefix: lmtoy_
 
+authentication:
+  csv_file: lmt_archive_user_info_20250702.csv
+  csv_path: .
+
 

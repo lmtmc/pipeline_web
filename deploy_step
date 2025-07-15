@@ -1,0 +1,8 @@
+1. revise code in local machine
+2. push to github
+3. ssh to unity-toltec5
+4. pull from github
+5. test the code from the unity-toltec5-help account
+6. if it works, ssh to unity-toltec5-root
+7. systemctl restart gunicorn_dash.pipeline_web
+8. systemctl restart apache2

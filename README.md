@@ -66,7 +66,7 @@ pipeline_web/
     - The application uses a CSV file for PID-based authentication
     - Ensure your CSV file contains columns: `username`, `password`, `api_token`, `expiration`
     - Use the utility script to update CSV configuration:
-      ```shell
+    ```shell
       python tests/update_csv_config.py
       ```
 
@@ -77,18 +77,18 @@ pipeline_web/
 ## Running the Application
 
 ### Local Development
-```shell
+    ```shell
 python app.py --port 8080
-```
+    ```
 The application will be accessible at [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
 ### Remote Server Setup
 For remote server deployment, use SSH port forwarding:
-```shell
+        ```shell
 # Add to your ~/.ssh/config
 Host your-server
-    LocalForward 5000 127.0.0.1:8000
-```
+        LocalForward 5000 127.0.0.1:8000
+        ```
 
 Then access via [http://127.0.0.1:5000](http://127.0.0.1:5000)
 

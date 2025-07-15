@@ -187,26 +187,26 @@ def login_status(n_clicks, password, pid, remember_me):
             login_user(user, remember=bool(remember_me))
         else:
             # Fallback to database authentication
-            user = User.query.filter_by(username=pid).first()
-            
-            if not user or not check_password_hash(user.password, password):
-                # Log failed login attempt
-                log_login_attempt(
-                    username=pid,
-                    success=False,
-                    ip_address=request.remote_addr,
-                    user_agent=request.user_agent.string
-                )
-                return (
-                    'Invalid credentials. Please try again.',
-                    True,
-                    'danger',
-                    no_update,
-                    ''  # Clear password field
-                )
-            
+        user = User.query.filter_by(username=pid).first()
+
+        if not user or not check_password_hash(user.password, password):
+            # Log failed login attempt
+            log_login_attempt(
+                username=pid,
+                success=False,
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string
+            )
+            return (
+                'Invalid credentials. Please try again.',
+                True,
+                'danger',
+                no_update,
+                ''  # Clear password field
+            )
+
             # Database authentication successful
-            login_user(user, remember=bool(remember_me))
+        login_user(user, remember=bool(remember_me))
 
         # Log successful login
         log_login_attempt(

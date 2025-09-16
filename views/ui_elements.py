@@ -230,10 +230,11 @@ def create_radio_parameter(col, options, tooltip=None,**kwargs):
         [
             dbc.Label(f'{col.split("-")[-1]}:', id=f'{col}-label'),
             dcc.RadioItems(id=f'{col}-radio',
-                           options=[{'label': 'N/A', 'value': ''}] + [{'label': opt, 'value': opt} for opt in options],
-                           className='mb-3',
-                           inputStyle={"margin-right": "10px"}
-                           ),
+               options=[{'label': html.Span(['Default ', html.Small('(not specified)', style={'color': '#666', 'font-style': 'italic'})]), 'value': ''}] + 
+                       [{'label': opt, 'value': opt} for opt in options],
+               className='mb-3',
+               inputStyle={"margin-right": "10px"}
+               ),
             dbc.Tooltip(tooltip, target=f'{col}-label') if tooltip else None
         ]
     )
@@ -353,7 +354,7 @@ rsr_parameter_configs = common_configs + [
 ]
 
 sequoia_parameter_configs = common_configs + [
-    {'name': 'pix_action', 'type': 'radio', 'options':['Add','Exclude'], 'width': 2},
+    {'name': 'pix_action', 'type': 'radio', 'options':['Include','Exclude'], 'width': 2},
     {'name': 'pix_list', 'type': 'checkbox',
      'options':[{'label': str(i), 'value': str(i)} for i in range(16)],'value':[],'width': 2},
     {'name': 'dv', 'type': 'input'},
@@ -466,6 +467,17 @@ runfile_layout = html.Div([
                 ]),
                 width='auto',
             )]),
+
+        # Tooltips for the top button group
+        dbc.Tooltip([
+            html.Div("Save filtered/visible table data to a new file"),
+            html.Hr(style={'margin': '5px 0', 'border-color': '#ddd'}),
+            html.Small("💡 To filter: Click the menu icon (☰) next to any column header", style={'color': '#666'})
+        ], target='runfile-save-btn', placement='bottom'),
+        dbc.Tooltip("Check the status of submitted jobs", target='check-status-btn', placement='bottom'),
+        dbc.Tooltip("Submit selected data for processing", target='runfile-run-btn', placement='bottom'),
+        dbc.Tooltip("View results from completed jobs", target='view-result-btn', placement='bottom'),
+        
         html.Div([
             dbc.ButtonGroup([
                 dbc.Button(html.I(className='fas fa-edit'), id=Table.EDIT_BTN.value, outline=True, color='secondary',

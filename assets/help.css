@@ -1,88 +1,255 @@
-.help-container {
-    width: 80%;
-    margin: auto;
-    text-align: left;
-    font-size: 16px;
-    padding-bottom: 50px;
-    color: #333;
-    line-height: 1.6;
+/* Help page styles with improved image layouts */
+:root {   
+  --help-gutter: 20px;   
+  --help-bg: #f8f9fa;   
+  --help-card: #ffffff;   
+  --primary: #007bff;   
+  --muted: #6c757d;   
+  --help-base-font: 20px;
+  --help-max-width: 1200px;
+}  
+
+.help-container {   
+  max-width: var(--help-max-width);   
+  margin: 0 auto;   
+  padding: 32px;   
+  background: var(--help-bg);   
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+}  
+
+.help-title {   
+  color: #2c3e50;   
+  text-align: center;   
+  font-size: 3.4rem;   
+  margin: 0 0 12px 0;   
+  font-weight: 700; 
+}  
+
+.help-separator {   
+  border: none;   
+  height: 1px;   
+  background: #e9ecef;   
+  margin: 14px 0 28px 0; 
+}  
+
+.help-main-grid {   
+  display: grid;   
+  grid-template-columns: 280px 1fr;   
+  gap: 24px; 
+}  
+
+.help-left-col { 
+  padding-right: 12px; 
+} 
+.help-right-col { 
+  padding-left: 12px; 
+}  
+
+/* TOC */ 
+.help-toc {   
+  position: sticky;   
+  top: 22px; 
+} 
+.help-toc-title {   
+  font-size: 2.5rem;   
+  margin-bottom: 8px;   
+  color: #2c3e50; 
+} 
+.help-toc-list { 
+  list-style: none; 
+  padding-left: 0; 
+} 
+.help-toc-list li { 
+  margin: 10px 0;
+} 
+.help-toc-link { 
+  color: var(--primary); 
+  text-decoration: none; 
+  font-weight: 500;
+  font-size: 2.5rem;
+} 
+.help-toc-link:hover { 
+  text-decoration: underline; 
+}  
+
+/* Section cards */ 
+.help-section {   
+  background: var(--help-card);   
+  border-radius: 8px;   
+  padding: 24px;   
+  margin-bottom: 24px;   
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); 
+}  
+
+.help-section-title {   
+  color: #2c3e50;   
+  font-size: 3.2rem;   
+  margin: 0 0 16px 0;   
+  padding-bottom: 8px;   
+  border-bottom: 1px solid #f1f3f5; 
+}  
+
+/* Layout Option 1: Images below text (full width) */
+.help-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.help-section {
-    margin: 30px 0;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.help-image-full-width {
+  width: 100%;
+  max-width: 800px; /* Limit max size for very large screens */
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid #e9ecef;
+  margin-top: 8px;
 }
 
-.help-section h2 {
-    color: #2c3e50;
-    margin-bottom: 15px;
-    font-size: 24px;
-    font-weight: 600;
+/* Layout Option 2: Images to the right (wider) */
+.help-section-row {   
+  display: flex;   
+  gap: 24px;   
+  align-items: flex-start; 
+}  
+
+.help-text-col { 
+  flex: 1; 
 }
 
-.help-section h3 {
-    color: #34495e;
-    margin: 20px 0 10px;
-    font-size: 20px;
-    font-weight: 500;
+.help-text-col-wide {
+  flex: 1;
+  min-width: 0; /* Prevents text overflow issues */
 }
 
-.help-section h4 {
-    color: #7f8c8d;
-    margin: 15px 0 10px;
-    font-size: 18px;
-    font-weight: 500;
+.help-image-col { 
+  width: 320px; 
+  flex: 0 0 320px; 
+} 
+
+.help-image-col-wide {
+  width: 450px; /* Increased from 320px */
+  flex: 0 0 450px;
 }
 
-.help-section ul {
-    list-style-type: disc;
-    margin-left: 20px;
-    margin-bottom: 15px;
+.help-image { 
+  width: 100%; 
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
+}
+
+.help-image-side-wide {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid #e9ecef;
+}
+
+.help-paragraph { 
+  color: var(--muted); 
+  font-size: calc(var(--help-base-font) * 1.15);
+  line-height: 1.7;
+  margin-bottom: 16px;
+} 
+
+.help-subtitle { 
+  color: #34495e; 
+  font-size: 1.4rem;
+  margin-top: 12px; 
+  margin-bottom: 10px; 
+}  
+
+.help-features-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 16px 0 20px 0;
+} 
+
+.help-feature-item { 
+  background: var(--help-bg); 
+  padding: 14px;
+  border-radius: 6px; 
+  border-left: 4px solid var(--primary); 
+} 
+
+.help-feature-title { 
+  color: var(--primary); 
+  font-size: 1.3rem;
+  margin: 0 0 8px 0; 
+} 
+
+.help-feature-list { 
+  list-style: disc; 
+  margin-left: 20px;
+  color: var(--muted);
+  font-size: 1.05rem;
+}  
+
+.help-security-note { 
+  background: #fff7e6; 
+  border-left: 4px solid #ffc107; 
+  padding: 16px;
+  border-radius: 6px;
+  font-size: 1.1rem;
+}  
+
+/* Lists and other text elements */
+.help-section ul, .help-section ol {
+  font-size: calc(var(--help-base-font) * 1.1);
+  line-height: 1.6;
+  margin-bottom: 16px;
 }
 
 .help-section li {
-    margin-bottom: 8px;
+  margin-bottom: 8px;
 }
 
-.help-section img {
-    display: block;
+/* Responsive design */ 
+@media (max-width: 1200px) {
+  .help-image-col-wide {
+    width: 380px;
+    flex: 0 0 380px;
+  }
+}
+
+@media (max-width: 920px) {   
+  .help-main-grid { 
+    grid-template-columns: 1fr; 
+  }   
+  
+  .help-section-row {
+    flex-direction: column;
+  }
+  
+  .help-image-col, 
+  .help-image-col-wide { 
+    width: 100%; 
+    flex: none;
+  }   
+  
+  .help-toc { 
+    position: relative; 
+    margin-bottom: 12px; 
+  }
+  
+  .help-title {
+    font-size: 2.8rem;
+  }
+  .help-section-title {
+    font-size: 2.4rem;
+  }
+  
+  .help-image-full-width {
     max-width: 100%;
-    height: auto;
-    margin: 20px auto;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+  }
+}  
 
-.help-section hr {
-    border: none;
-    height: 1px;
-    background-color: #eee;
-    margin: 30px 0;
+/* Smooth scroll for anchor links */ 
+html { 
+  scroll-behavior: smooth; 
 }
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .help-container {
-        width: 95%;
-        padding: 10px;
-    }
-    
-    .help-section {
-        padding: 15px;
-    }
-    
-    .help-section h2 {
-        font-size: 20px;
-    }
-    
-    .help-section h3 {
-        font-size: 18px;
-    }
-    
-    .help-section h4 {
-        font-size: 16px;
-    }
-} 

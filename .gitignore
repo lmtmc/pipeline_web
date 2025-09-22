@@ -217,3 +217,4 @@ deploy_step
 # Zone identifiers (Windows)
 *:Zone.Identifier
 https:/api.github.com/orgs/lmtoy_run
+lmt_archive_user_info_20250702.csv

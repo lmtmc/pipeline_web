@@ -238,7 +238,7 @@ def create_radio_parameter(col, options, tooltip=None,**kwargs):
             dbc.Tooltip(tooltip, target=f'{col}-label') if tooltip else None
         ]
     )
-def create_input_parameter(col, disabled=False, hidden=False, **kwargs):
+def create_input_parameter(col, disabled=False, hidden=False,**kwargs):
     label = col.split("-")[1]
     label = f'{"instrument" if label == "_io" else label}:'
 
@@ -253,19 +253,18 @@ def create_input_parameter(col, disabled=False, hidden=False, **kwargs):
         label_style["display"] = "none"
         container_style["display"] = "none"
 
-    return html.Div(
-        [
-            dbc.Label(label, style=label_style, id=f'{col}-label'),  # Conditionally hide the label
-            dcc.Input(
-                id=f'{col}-input',
-                type='text',
-                disabled=disabled,
-                className='mb-3',
-                style=input_style  # Apply style conditionally
-            ),
-        ],
-        style=container_style  # Apply container style conditionally
-    )
+    components = [
+        dbc.Label(label, style=label_style, id=f'{col}-label'),
+        dcc.Input(
+            id=f'{col}-input',
+            type='text',
+            disabled=disabled,
+            className='mb-3',
+            style=input_style
+        ),
+    ]
+    
+    return html.Div(components, style=container_style)
 
 def create_checkbox_parameter(col, options,**kwargs):
     return html.Div(
@@ -364,6 +363,12 @@ sequoia_parameter_configs = common_configs + [
     {'name': 'birdies', 'type': 'input'},
     {'name': 'public', 'type': 'input','disabled': True,'hidden': True},
     {'name': 'qagrade', 'type': 'input', 'disabled': True,'hidden': True},
+    {'name': 'b_order', 'type': 'input', 'tooltip': 'baseline order (use -1 to skip)'},
+    {'name': 'otf_cal', 'type': 'input', 'tooltip': 'use 1 if forcing to use cal during the OTF'},
+    {'name': 'vlsr', 'type': 'input', 'tooltip': 'only set it if change from header (units: km/s)'},
+    {'name': 'restfreq', 'type': 'input', 'tooltip': 'only set it if change from header (units: GHz)'},
+    {'name': 'resolution', 'type': 'input', 'tooltip': 'only set it if change from lambda/D (units: arcsec)'},
+    {'name': 'nppb', 'type': 'input', 'tooltip': 'number of points per lambda/D'},
 ]
 
 rsr_cols = [f"rsr-{config['name']}" for config in rsr_parameter_configs]
